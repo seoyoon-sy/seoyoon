@@ -6,7 +6,10 @@
 clear; clc; close all;
 
 %% ===== 사용자 설정 =====================================================
-xlsxFile = '엑셀파일명.xlsx';            % 엑셀 파일 경로 (예: 'C:\data\result.xlsx')
+% 실행하면 엑셀 파일 선택 창이 뜸 (취소하면 종료)
+[fn, fp] = uigetfile({'*.xlsx;*.xlsm;*.xls','Excel 파일 (*.xlsx, *.xlsm, *.xls)'}, '엑셀 파일을 선택하세요');
+if isequal(fn, 0), disp('파일 선택이 취소되었습니다.'); return; end
+xlsxFile = fullfile(fp, fn);
 shAll    = 'T형 모델 기본형';            % 전체기간 시트 (672개: 28일 x 24시간)
 shSMW    = 'T형 모델 기본형(SMW)';       % SMW 필터링 시트 (77개)
 fontName = 'Malgun Gothic';              % Mac이면 'AppleGothic'
