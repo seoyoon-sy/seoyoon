@@ -1,8 +1,9 @@
 %% plot_psi_comparison.m
-%  선형열관류율(psi) 비교 그림
+%  선형열관류율(psi) 비교 그림 (createfigure 형식)
 %   - 왼쪽 : Timestep별 psi (Model-free 적용 전 / Method ① 후 / Method ② 후)
 %   - 오른쪽: 전체기간 / 필터링 적용 / Method ① / Method ② 박스플롯
 %  필요: MATLAB R2020b 이상 (boxchart, exportgraphics 사용)
+%  결과: psi_comparison_num.png (눈금 숫자 있음), psi_comparison_nonum.png (없음)
 clear; clc; close all;
 
 %% ===== 사용자 설정 =====================================================
@@ -10,12 +11,12 @@ clear; clc; close all;
 [fn, fp] = uigetfile({'*.xlsx;*.xlsm;*.xls','Excel 파일 (*.xlsx, *.xlsm, *.xls)'}, '엑셀 파일을 선택하세요');
 if isequal(fn, 0), disp('파일 선택이 취소되었습니다.'); return; end
 xlsxFile = fullfile(fp, fn);
+
 shAll    = 'T형 모델 기본형';            % 전체기간 시트 (672개: 28일 x 24시간)
 shSMW    = 'T형 모델 기본형(SMW)';       % SMW 필터링 시트 (77개)
-fontName = 'Malgun Gothic';              % Mac이면 'AppleGothic'
-yLim     = [0.3 1.5];
-showAllPoints = false;                   % true: 4개 박스 모두에 점 표시 (false: 전체기간만)
-outPrefix = 'psi_comparison';            % 저장 파일명 접두어 (_num.png, _nonum.png 두 장 생성)
+showAllPoints = true;                    % true: 박스 4개 모두에 점 표시, false: 전체기간만
+showBands     = true;                    % true: 배경 색 띠(25~75% 구간) 표시
+outPrefix = 'psi_comparison';            % 저장 파일명 접두어
 
 %% ===== 데이터 읽기 =====================================================
 % 열 번호: A=1 day, B=2 time, H=8 Baseline psi, I=9 Case I psi, K=11 Case II psi
@@ -24,124 +25,157 @@ rawSMW = readmatrix(xlsxFile, 'FileType','spreadsheet', 'Sheet', shSMW, 'Range',
 rawAll = rawAll(~isnan(rawAll(:,1)), :);   % 빈 행 제거
 rawSMW = rawSMW(~isnan(rawSMW(:,1)), :);
 
-psiAll    = rawAll(:, 8);    % 전체기간 Baseline          -> '전체기간' 박스
-psiBefore = rawSMW(:, 8);    % SMW 구간 Baseline (적용 전) -> '필터링 적용' 박스, 파란 원
-psiM1     = rawSMW(:, 9);    % Case I  (Method ①)          -> 초록 삼각형
-psiM2     = rawSMW(:, 11);   % Case II (Method ②)          -> 노란 사각형
+psiAll    = rawAll(:, 8);    % 전체기간 Baseline           -> '전체기간' 박스
+psiBefore = rawSMW(:, 8);    % SMW 구간 Baseline (적용 전)  -> '필터링 적용' 박스, 파란 원
+psiM1     = rawSMW(:, 9);    % Case I  (Method ①)           -> 초록 삼각형
+psiM2     = rawSMW(:, 11);   % Case II (Method ②)           -> 노란 사각형
 
 nS = numel(psiBefore);
 t  = (1:nS).';               % Timestep (필터링된 데이터의 순번)
 
-%% ===== 색상 ===========================================================
-cBlue   = [0.30 0.50 0.80];
-cGreen  = [0.20 0.60 0.30];
-cYellow = [0.93 0.80 0.10];
-cRed    = [0.90 0.30 0.20];
-lighten = @(c,a) c + (1-c)*a;
-
-for showNum = [true false]   % true: 눈금 숫자 있음, false: 눈금 숫자 없음
-
-%% ===== Figure / Axes ==================================================
-fig = figure('Color','w','Units','centimeters','Position',[5 5 15 9.5]);
-ax1 = axes(fig, 'Position', [0.09 0.14 0.50 0.70]);   % 왼쪽: Timestep
-ax2 = axes(fig, 'Position', [0.63 0.14 0.34 0.70]);   % 오른쪽: 박스플롯
-hold(ax1,'on'); hold(ax2,'on');
-
-xl1 = [0 nS+1];
-xl2 = [0.4 4.6];
-
-%% ===== 배경 밴드 (각 데이터의 25~75% 구간) ============================
-bandB  = iqrange(psiBefore);
-bandM1 = iqrange(psiM1);
-bandM2 = iqrange(psiM2);
-for ax = [ax1 ax2]
-    xl = xlim_of(ax, xl1, xl2, ax1);
-    drawBand(ax, xl, bandB,  cBlue);
-    drawBand(ax, xl, bandM1, cGreen);
-    drawBand(ax, xl, bandM2, cYellow);
+%% ===== 그림 (숫자 있음 / 없음 두 장) ====================================
+for showNum = [true false]
+    createfigure(t, psiBefore, psiM1, psiM2, psiAll, showNum, showAllPoints, showBands);
+    drawnow;
+    if showNum, tag = 'num'; else, tag = 'nonum'; end
+    outFile = sprintf('%s_%s.png', outPrefix, tag);
+    exportgraphics(gcf, outFile, 'Resolution', 300);
+    fprintf('저장 완료: %s  (전체기간 n=%d, SMW 필터링 n=%d)\n', outFile, numel(psiAll), nS);
 end
 
-%% ===== 왼쪽: Timestep 그래프 ===========================================
-plot(ax1, t, psiBefore, '-', 'Color', lighten(cBlue,0.5),   'LineWidth', 0.6, 'HandleVisibility','off');
-plot(ax1, t, psiM1,     '-', 'Color', lighten(cGreen,0.5),  'LineWidth', 0.6, 'HandleVisibility','off');
-plot(ax1, t, psiM2,     '-', 'Color', lighten(cYellow,0.3), 'LineWidth', 0.6, 'HandleVisibility','off');
+%% ===== 로컬 함수 (스크립트 맨 아래에 위치해야 함) =======================
+function createfigure(X1, Y1, Y2, Y3, Y4, showNum, showAllPoints, showBands)
+%CREATEFIGURE(X1, Y1, Y2, Y3, Y4, showNum, showAllPoints, showBands)
+%  X1:  Timestep 벡터
+%  Y1:  Model-free 적용 전 psi (필터링 구간 Baseline)
+%  Y2:  Model-free ① 적용 후 psi (Case I)
+%  Y3:  Model-free ② 적용 후 psi (Case II)
+%  Y4:  전체기간 Baseline psi
+%  showNum: true면 y축 눈금 숫자 표시
+%  showAllPoints: true면 박스플롯 4개 모두에 점 표시
+%  showBands: true면 배경 색 띠 표시
 
-h1 = scatter(ax1, t, psiBefore, 22, cBlue,   'o', 'filled', 'MarkerFaceAlpha',0.45, 'MarkerEdgeColor',cBlue);
-h2 = scatter(ax1, t, psiM1,     26, cGreen,  '^', 'filled', 'MarkerFaceAlpha',0.60, 'MarkerEdgeColor',[0.1 0.3 0.1]);
-h3 = scatter(ax1, t, psiM2,     26, cYellow, 's', 'filled', 'MarkerFaceAlpha',0.85, 'MarkerEdgeColor',[0.4 0.35 0]);
+yLim = [0.3 1.5];
+nS = numel(X1);
+Size1 = 22;
+Size2 = 26;
+Color1 = [0.3 0.5 0.8];     % 파랑
+Color2 = [0.2 0.6 0.3];     % 초록
+Color3 = [0.93 0.8 0.1];    % 노랑
 
-xlim(ax1, xl1); ylim(ax1, yLim);
-xlabel(ax1, 'Timestep', 'FontName', fontName, 'FontSize', 10, 'FontWeight','bold');
-ylabel(ax1, '\psi', 'Interpreter','tex', 'FontSize', 13);
-ax1.XTick = [];
-ax1.YTick = yLim(1):0.3:yLim(2);
+% figure 생성
+figure1 = figure('WindowState','maximized','Color',[1 1 1]);
 
-%% ===== 오른쪽: 박스플롯 ================================================
-data  = {psiAll, psiBefore, psiM1, psiM2};
-fcol  = {[0.95 0.60 0.40], lighten(cBlue,0.55), lighten(cGreen,0.45), lighten(cYellow,0.45)};
-ecol  = {[0.55 0.25 0.15], cBlue*0.7, cGreen*0.7, [0.55 0.45 0]};
-ptcol = {cRed, cBlue, cGreen, [0.85 0.70 0]};
+% axes 생성
+axes1 = axes('Parent',figure1,'Position',[0.09 0.14 0.5 0.7]);
+hold(axes1,'on');
+xlim(axes1,[-1 nS+1]);
+ylim(axes1,yLim);
 
-rng(1);                                   % 지터 재현용 시드
+% 배경 밴드 (각 데이터의 25~75% 구간)
+if showBands
+    drawBand(axes1, [-1 nS+1], iqrange(Y1), Color1);
+    drawBand(axes1, [-1 nS+1], iqrange(Y2), Color2);
+    drawBand(axes1, [-1 nS+1], iqrange(Y3), Color3);
+end
+
+% scatter 생성
+scatter(X1,Y1,Size1,Color1,'DisplayName','Model-free 적용 전','Parent',axes1,...
+    'MarkerEdgeColor',[0.3 0.5 0.8],...
+    'MarkerFaceAlpha',0.45,...
+    'MarkerFaceColor','flat');
+
+scatter(X1,Y2,Size2,Color2,'DisplayName','Model-free ① 적용 후','Parent',axes1,...
+    'MarkerEdgeColor',[0.1 0.3 0.1],...
+    'MarkerFaceAlpha',0.6,...
+    'MarkerFaceColor','flat',...
+    'Marker','^');
+
+scatter(X1,Y3,Size2,Color3,'DisplayName','Model-free ② 적용 후','Parent',axes1,...
+    'MarkerEdgeColor',[0.4 0.35 0],...
+    'MarkerFaceAlpha',0.85,...
+    'MarkerFaceColor','flat',...
+    'Marker','square');
+
+% ylabel / xlabel 생성
+ylabel('\psi');
+xlabel('Timestep','FontWeight','bold','FontName','Malgun Gothic');
+
+box(axes1,'on');
+hold(axes1,'off');
+
+% 눈금 숫자 유무
+if showNum
+    yTickLab = {'0.3','0.6','0.9','1.2','1.5'};
+else
+    yTickLab = '';
+end
+
+% 나머지 axes 속성 설정
+set(axes1,'FontName','Malgun Gothic','FontSize',9,'GridLineStyle','--',...
+    'GridLineWidth',1,'Layer','top','LineWidth',2,'TickLength',[0.02 0.025],...
+    'XGrid','on','XMinorTick','on','XTick',[0 10 20 30 40 50 60 70],...
+    'XTickLabel',{'','','','','','','',''},'YGrid','on','YMinorTick','on',...
+    'YTick',[0.3 0.6 0.9 1.2 1.5],'YTickLabel',yTickLab);
+
+% legend 생성
+legend1 = legend(axes1,'show');
+set(legend1,...
+    'Position',[0.39239852398524 0.927295247724974 0.21520295202952 0.0254095045500506],...
+    'Orientation','horizontal',...
+    'FontSize',8.5);
+
+% axes 생성
+axes2 = axes('Parent',figure1,'Position',[0.63 0.14 0.34 0.7]);
+hold(axes2,'on');
+xlim(axes2,[0.4 4.6]);
+ylim(axes2,yLim);
+
+if showBands
+    drawBand(axes2, [0.4 4.6], iqrange(Y1), Color1);
+    drawBand(axes2, [0.4 4.6], iqrange(Y2), Color2);
+    drawBand(axes2, [0.4 4.6], iqrange(Y3), Color3);
+end
+
+% boxchart 생성 (1: 전체기간, 2: 필터링 적용, 3: Method ①, 4: Method ②)
+ydata  = {Y4, Y1, Y2, Y3};
+faceC  = {[0.95 0.6 0.4], [0.685 0.775 0.91], [0.56 0.78 0.615], [0.9615 0.89 0.505]};
+edgeC  = {[0.55 0.25 0.15], [0.21 0.35 0.56], [0.14 0.42 0.21], [0.55 0.45 0]};
+pointC = {[0.9 0.3 0.2], [0.3 0.5 0.8], [0.2 0.6 0.3], [0.85 0.7 0]};
+
+rng(1);   % 점 흩뿌림(지터) 재현용 시드
 for k = 1:4
-    v = data{k};
-    boxchart(ax2, k*ones(size(v)), v, ...
-        'BoxFaceColor', fcol{k}, 'BoxFaceAlpha', 0.75, ...
-        'BoxEdgeColor', ecol{k}, 'WhiskerLineColor', ecol{k}, ...
-        'BoxMedianLineColor', ecol{k}, 'LineWidth', 0.8, ...
-        'MarkerStyle', 'none', 'BoxWidth', 0.6);
+    v = ydata{k};
+    boxchart(k*ones(size(v)),v,'Parent',axes2,'MarkerStyle','none',...
+        'LineWidth',0.8,...
+        'WhiskerLineColor',edgeC{k},...
+        'BoxFaceAlpha',0.75,...
+        'BoxMedianLineColor',edgeC{k},...
+        'BoxEdgeColor',edgeC{k},...
+        'BoxFaceColor',faceC{k},...
+        'BoxWidth',0.6);
+    % 점 표시 (showAllPoints=false면 전체기간만)
     if k == 1 || showAllPoints
         jit = (rand(size(v)) - 0.5) * 0.5;
-        scatter(ax2, k + jit, v, 5, ptcol{k}, 'filled', ...
-            'MarkerFaceAlpha', 0.45, 'HandleVisibility','off');
+        scatter(k + jit, v, 6, pointC{k}, 'filled', 'Parent', axes2, ...
+            'MarkerFaceAlpha', 0.5, 'HandleVisibility', 'off');
     end
 end
 
-xlim(ax2, xl2); ylim(ax2, yLim);
-ax2.XTick = 1:4;
-ax2.XTickLabel = {'전체\newline기간', '필터링\newline적용', 'Method\newline①', 'Method\newline②'};
-ax2.YTick = ax1.YTick;
-ax2.YTickLabel = [];
-
-%% ===== 공통 서식 ======================================================
-for ax = [ax1 ax2]
-    ax.Box = 'on';
-    ax.FontName = fontName;
-    ax.FontSize = 9;
-    ax.LineWidth = 0.6;
-    ax.TickDir = 'in';
-    ax.Layer = 'top';
+box(axes2,'on');
+hold(axes2,'off');
+% 나머지 axes 속성 설정
+set(axes2,'FontName','Malgun Gothic','FontSize',9,'Layer','top','LineWidth',...
+    0.6,'XTick',[1 2 3 4],'XTickLabel',...
+    {'전체\newline기간','필터링\newline적용','Method\newline①','Method\newline②'},...
+    'YTick',[0.3 0.6 0.9 1.2 1.5],'YTickLabel','');
 end
-ax1.XLabel.FontName = fontName;
 
-%% ===== 범례 (그림 상단 중앙) ===========================================
-lgd = legend(ax1, [h1 h2 h3], ...
-    {'Model-free 적용 전', 'Model-free ① 적용 후', 'Model-free ② 적용 후'}, ...
-    'Orientation','horizontal', 'FontName',fontName, 'FontSize',8.5, 'Box','on');
-lgd.Units = 'normalized';
-lgd.Position = [0.14 0.905 0.72 0.07];
-
-%% ===== 눈금 숫자 유무 / 저장 ===========================================
-if ~showNum
-    ax1.YTickLabel = [];
-end
-if showNum, tag = 'num'; else, tag = 'nonum'; end
-outFile = sprintf('%s_%s.png', outPrefix, tag);
-exportgraphics(fig, outFile, 'Resolution', 300);
-fprintf('저장 완료: %s  (전체기간 n=%d, SMW 필터링 n=%d)\n', outFile, numel(psiAll), nS);
-
-end   % for showNum
-
-%% ===== 로컬 함수 (스크립트 맨 아래에 위치해야 함) =======================
 function r = iqrange(v)
 % 25%, 75% 분위수 (Statistics Toolbox 없이 계산)
     v = sort(v(:));
     n = numel(v);
     r = interp1(((1:n)-0.5)/n, v, [0.25 0.75], 'linear', 'extrap');
-end
-
-function xl = xlim_of(ax, xl1, xl2, ax1)
-    if ax == ax1, xl = xl1; else, xl = xl2; end
 end
 
 function drawBand(ax, xl, y, c)
