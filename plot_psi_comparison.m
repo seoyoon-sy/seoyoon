@@ -12,7 +12,7 @@ shSMW    = 'T형 모델 기본형(SMW)';       % SMW 필터링 시트 (77개)
 fontName = 'Malgun Gothic';              % Mac이면 'AppleGothic'
 yLim     = [0.3 1.5];
 showAllPoints = false;                   % true: 4개 박스 모두에 점 표시 (false: 전체기간만)
-outFile  = 'psi_comparison.png';
+outPrefix = 'psi_comparison';            % 저장 파일명 접두어 (_num.png, _nonum.png 두 장 생성)
 
 %% ===== 데이터 읽기 =====================================================
 % 열 번호: A=1 day, B=2 time, H=8 Baseline psi, I=9 Case I psi, K=11 Case II psi
@@ -35,6 +35,8 @@ cGreen  = [0.20 0.60 0.30];
 cYellow = [0.93 0.80 0.10];
 cRed    = [0.90 0.30 0.20];
 lighten = @(c,a) c + (1-c)*a;
+
+for showNum = [true false]   % true: 눈금 숫자 있음, false: 눈금 숫자 없음
 
 %% ===== Figure / Axes ==================================================
 fig = figure('Color','w','Units','centimeters','Position',[5 5 15 9.5]);
@@ -116,9 +118,16 @@ lgd = legend(ax1, [h1 h2 h3], ...
 lgd.Units = 'normalized';
 lgd.Position = [0.14 0.905 0.72 0.07];
 
-%% ===== 저장 ===========================================================
+%% ===== 눈금 숫자 유무 / 저장 ===========================================
+if ~showNum
+    ax1.YTickLabel = [];
+end
+if showNum, tag = 'num'; else, tag = 'nonum'; end
+outFile = sprintf('%s_%s.png', outPrefix, tag);
 exportgraphics(fig, outFile, 'Resolution', 300);
 fprintf('저장 완료: %s  (전체기간 n=%d, SMW 필터링 n=%d)\n', outFile, numel(psiAll), nS);
+
+end   % for showNum
 
 %% ===== 로컬 함수 (스크립트 맨 아래에 위치해야 함) =======================
 function r = iqrange(v)
