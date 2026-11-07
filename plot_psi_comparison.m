@@ -16,8 +16,8 @@ outFile  = 'psi_comparison.png';
 
 %% ===== 데이터 읽기 =====================================================
 % 열 번호: A=1 day, B=2 time, H=8 Baseline psi, I=9 Case I psi, K=11 Case II psi
-rawAll = readmatrix(xlsxFile, 'Sheet', shAll, 'Range', 'A3:K675');
-rawSMW = readmatrix(xlsxFile, 'Sheet', shSMW, 'Range', 'A3:K675');
+rawAll = readmatrix(xlsxFile, 'FileType','spreadsheet', 'Sheet', shAll, 'Range', 'A3:K675');
+rawSMW = readmatrix(xlsxFile, 'FileType','spreadsheet', 'Sheet', shSMW, 'Range', 'A3:K675');
 rawAll = rawAll(~isnan(rawAll(:,1)), :);   % 빈 행 제거
 rawSMW = rawSMW(~isnan(rawSMW(:,1)), :);
 
