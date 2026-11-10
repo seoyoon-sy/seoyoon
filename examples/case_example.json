@@ -1,0 +1,14 @@
+{
+  "materials": {
+    "concrete":          {"lam": 1.6,   "rho": 2200, "cp": 795},
+    "EPS":               {"lam": 0.032, "rho": 25,   "cp": 1500},
+    "0.5B cement block": {"lam": 0.6,   "rho": 1400, "cp": 1000},
+    "gypsum":            {"lam": 0.16,  "rho": 900,  "cp": 840},
+    "XPS":               {"lam": 0.004, "rho": 2200, "cp": 1300}
+  },
+  "layers": [["concrete", 200], ["EPS", 180], ["0.5B cement block", 90], ["gypsum", 10]],
+  "partition_material": "concrete", "partition_mm": 180,
+  "strip_material": "XPS", "strip_mm": 10, "strip_from_layer": 1, "strip_extend_mm": 170,
+  "wall_left_mm": 1000, "wall_right_mm": 1000, "room_depth_mm": 900, "z_mm": 1000,
+  "mesh": "fine"
+}

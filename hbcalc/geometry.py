@@ -37,7 +37,9 @@ class TJunction:
     strip_mm: float = 10.0
     strip_from_layer: int = 1            # 띠가 시작하는 층 번호 (그 층의 실외쪽 면에서 시작)
     strip_extend_mm: float = 170.0       # 실내 마감면에서 실내쪽으로 더 뻗는 길이 (TRY3: 1480 -> 1650 mm)
-    wall_half_mm: float = 1000.0         # 내벽 양쪽 외벽 길이
+    wall_half_mm: float = 1000.0         # 내벽 양쪽 외벽 길이 (좌우 같을 때)
+    wall_left_mm: float | None = None    # 값을 주면 왼쪽 외벽 길이를 따로 지정
+    wall_right_mm: float | None = None   # 값을 주면 오른쪽 외벽 길이를 따로 지정 (출력 위치는 오른쪽)
     room_depth_mm: float = 900.0         # 내벽이 실내로 돌출한 길이
     outdoor_depth_mm: float = 1000.0     # 실외 경계 영역(재료 없음) 두께. 계산에는 영향 없음
     z_mm: float = 1000.0
@@ -128,9 +130,10 @@ def build_tjunction(spec: TJunction) -> Model:
 
     # --- 좌표 (mm)
     P, st = s.partition_mm, (s.strip_mm if s.strip_material else 0.0)
-    xL = s.wall_half_mm
+    xL = s.wall_left_mm if s.wall_left_mm is not None else s.wall_half_mm
+    wR = s.wall_right_mm if s.wall_right_mm is not None else s.wall_half_mm
     xR = xL + 2 * st + P
-    W = xR + s.wall_half_mm
+    W = xR + wR
     Yo = s.outdoor_depth_mm
     ycum = [Yo]
     for l in s.layers:
