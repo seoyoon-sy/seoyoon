@@ -150,6 +150,12 @@ def build_tjunction(spec: TJunction) -> Model:
               _axis(yb, cap, yfocus, caps_interval=capi, min_cells=mc, single={(round(0, 9), round(Yo, 9))}))
     # 층 경계 사이 구간이 strip 끝점 등으로 쪼개진 경우도 층 규칙을 따르게 하려면 위 breaks 로 충분하다
 
+    # 격자선을 직접 지정한 경우, 층 경계와 띠 위치가 격자선 위에 있어야 한다 (두께를 바꾸고 옛 격자를 쓰는 실수 방지)
+    for nm, br, ed, given in (("x", xb, xedges, s.x_edges_mm), ("y", yb, yedges, s.y_edges_mm)):
+        if given is not None:
+            bad = [b for b in br if np.abs(ed - b).min() > 1e-3]
+            if bad:
+                raise ValueError(f"지정한 {nm} 격자선이 구조 경계 {bad} mm 와 맞지 않음. 두께를 바꿨다면 x_edges_mm/y_edges_mm 를 지우고 자동 격자를 쓰세요.")
     nx, ny = len(xedges) - 1, len(yedges) - 1
     xc = 0.5 * (xedges[:-1] + xedges[1:])
     yc = 0.5 * (yedges[:-1] + yedges[1:])
