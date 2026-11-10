@@ -22,12 +22,15 @@ def zint(Lz, a, zmode="mid"):
 
 
 def exchange_area(lo_a, hi_a, plane_a, lo_b, hi_b, plane_b, Lz, zmode="mid", ngl=24):
-    """직각인 두 띠 사이 A_a F_ab (m2).
+    """직각인 두 띠 사이 A_a F_ab (m2). zmode: 'mid'(깊이 중간점에서 본 값), 'avg'(깊이 평균), 'inf'(2D 무한 깊이).
     띠 a: y=plane_a 평면, x in [lo_a, hi_a].  띠 b: x=plane_b 평면, y in [lo_b, hi_b].
     두 띠는 서로 마주 보는 쪽에 있어야 한다(호출하는 쪽에서 검사)."""
-    xg, wg = np.polynomial.legendre.leggauss(ngl)
     u1, u2 = sorted([abs(lo_a - plane_b), abs(hi_a - plane_b)])
     v1, v2 = sorted([abs(lo_b - plane_a), abs(hi_b - plane_a)])
+    if zmode == "inf":      # 2D (z 방향 무한히 깊음): 교차줄법 닫힌 식 x 깊이
+        d = np.hypot
+        return Lz * 0.5 * ((d(u1, v2) + d(u2, v1)) - (d(u1, v1) + d(u2, v2)))
+    xg, wg = np.polynomial.legendre.leggauss(ngl)
     u = (u2 - u1) / 2 * xg + (u2 + u1) / 2
     wu = (u2 - u1) / 2 * wg
     v = (v2 - v1) / 2 * xg + (v2 + v1) / 2

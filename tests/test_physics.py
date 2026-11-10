@@ -94,10 +94,10 @@ def test_view_factor_perpendicular_strips_long():
     # 모서리를 공유하는 직각 띠 (z 방향 아주 긴 경우): A_a F_ab = Lz (a + b - sqrt(a^2 + b^2)) / 2
     a, b, Lz = 0.5, 0.3, 2000.0
     ex = (a + b - np.hypot(a, b)) / 2 * Lz
-    for zm in ("avg", "mid"):
+    for zm in ("avg", "mid", "inf"):
         v = exchange_area(0, a, 0, 0, b, 0, Lz, zm, ngl=64)
         print(zm, v, ex, v / ex - 1)
-        assert abs(v / ex - 1) < 2e-3
+        assert abs(v / ex - 1) < (1e-12 if zm == 'inf' else 2e-3)
 
 
 def test_view_sum_le_one_tjunction():
