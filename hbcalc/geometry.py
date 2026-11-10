@@ -49,6 +49,8 @@ class TJunction:
     h_layer_mm: float = 20.0             # 외벽 층 두께 방향 최대 셀 크기
     growth: float = 0.25                 # 접합부에서 멀어질 때 셀 크기 증가율
     symmetric_mesh: bool = False         # True 면 왼쪽 접합부도 오른쪽처럼 촘촘히
+    mesh_mm: float | None = None         # 값을 주면 균일 격자(셀 크기 mesh_mm). 구조 경계와 출력 위치는 mesh_mm 의 배수여야 함
+    snap_mm: float | None = None         # 값을 주면 자동 격자의 모든 격자선을 snap_mm 의 배수로 맞춤 (예: 1)
     x_edges_mm: tuple | None = None      # 격자선을 직접 지정하면 위 격자 조절 값은 무시
     y_edges_mm: tuple | None = None
 
@@ -97,6 +99,13 @@ def _axis(breaks, cap, focus, caps_interval=None, min_cells=None, single=None):
     return np.array(edges)
 
 
+def _uniform(a, b, h, nm):
+    n = (b - a) / h
+    if abs(n - round(n)) > 1e-6:
+        raise ValueError(f"{nm} 방향 길이 {b - a} mm 가 mesh_mm={h} 의 배수가 아님")
+    return a + h * np.arange(int(round(n)) + 1)
+
+
 def build_tjunction(spec: TJunction) -> Model:
     s = spec
     names = {m.name for m in s.materials.values()} if isinstance(next(iter(s.materials.values())), Material) else set()
@@ -137,6 +146,8 @@ def build_tjunction(spec: TJunction) -> Model:
     xb = [0, xL, xL + st, xR - st, xR, W] + [xR + o for o in s.offsets_mm]
     xfocus = [xR] + ([xL] if s.symmetric_mesh else [])
     xedges = np.array(s.x_edges_mm, float) if s.x_edges_mm is not None else _axis(xb, cap, xfocus, caps_interval={})
+    if s.mesh_mm and s.x_edges_mm is None:
+        xedges = _uniform(0.0, W, s.mesh_mm, "x")
     yb = [0, Yo] + ycum[1:] + [y_top]
     if s.strip_material:
         yb += [y_strip0, y_strip1]
@@ -148,8 +159,14 @@ def build_tjunction(spec: TJunction) -> Model:
     yfocus = [y_in]
     yedges = (np.array(s.y_edges_mm, float) if s.y_edges_mm is not None else
               _axis(yb, cap, yfocus, caps_interval=capi, min_cells=mc, single={(round(0, 9), round(Yo, 9))}))
+    if s.mesh_mm and s.y_edges_mm is None:
+        yedges = np.r_[0.0, _uniform(Yo, y_top, s.mesh_mm, "y")]
     # 층 경계 사이 구간이 strip 끝점 등으로 쪼개진 경우도 층 규칙을 따르게 하려면 위 breaks 로 충분하다
 
+    if s.snap_mm and not s.mesh_mm:
+        snap = lambda e: np.unique(np.round(e / s.snap_mm) * s.snap_mm)
+        if s.x_edges_mm is None: xedges = snap(xedges)
+        if s.y_edges_mm is None: yedges = snap(yedges)
     # 격자선을 직접 지정한 경우, 층 경계와 띠 위치가 격자선 위에 있어야 한다 (두께를 바꾸고 옛 격자를 쓰는 실수 방지)
     for nm, br, ed, given in (("x", xb, xedges, s.x_edges_mm), ("y", yb, yedges, s.y_edges_mm)):
         if given is not None:

@@ -3,9 +3,14 @@ import os; sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__
 from hbcalc import Boundary
 from hbcalc.validate import *
 R=os.path.dirname(os.path.dirname(os.path.abspath(__file__)))+'/'
+# 사용: python validate_vs_voltra_excel.py {voltra|auto} 일사보정(시간) 출력접두어 [실내온도파일] [엑셀]
+#   기본(난방, 20도 고정): Wall_TI.FTE + voltra_30cases_night420_통합_v2.xlsx
+#   비난방: Wall_TI_2.FTE + Non_heating_Tsi.xlsx
 mesh = sys.argv[1]; shift=float(sys.argv[2]); out=sys.argv[3]
-bc=Boundary.from_voltra_files(R+'wall_TO.FTE',R+'Wall_TI.FTE',R+'Wall_HO.FHT',R+'Wall_HI.FHT',R+'Wall_IG2.FSG',R+'Wall_ID2.FSD',solar_shift_h=shift)
-xl,names=load_cases(R+'voltra_30cases_night420_통합_v2.xlsx')
+TI = sys.argv[4] if len(sys.argv) > 4 else 'Wall_TI.FTE'
+XLSX = sys.argv[5] if len(sys.argv) > 5 else 'voltra_30cases_night420_통합_v2.xlsx'
+bc=Boundary.from_voltra_files(R+'wall_TO.FTE',R+TI,R+'Wall_HO.FHT',R+'Wall_HI.FHT',R+'Wall_IG2.FSG',R+'Wall_ID2.FSD',solar_shift_h=shift)
+xl,names=load_cases(R+XLSX)
 POS=sorted(set(EXCEL_LABELS)|set(SIM_POS_VOLTRA_ORDER))
 rows=[]; perpos_a=[]; perpos_b=[]
 for nm in names:

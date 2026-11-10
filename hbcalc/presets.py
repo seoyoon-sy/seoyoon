@@ -34,3 +34,8 @@ VOLTRA_TRY3_Y_EDGES_MM = (0, 50, 100, 150, 200, 250, 300, 350, 400, 450, 500, 55
 def try3_voltra_mesh_model(lam=None, **kw):
     """VOLTRA 와 같은 격자를 쓰는 TRY3 모델 (검증 비교용)."""
     return try3_model(lam, x_edges_mm=VOLTRA_TRY3_X_EDGES_MM, y_edges_mm=VOLTRA_TRY3_Y_EDGES_MM, **kw)
+
+
+# 수렴한 해(물리적으로 정확한 쪽)를 얻는 격자: 접합부 근처 1 mm 에서 시작해 20 mm 까지 키우고 모든 격자선을 정수 mm 에 맞춘다.
+# 노드 약 8500개, 한 케이스(744시간) 약 30초. VOLTRA 격자 대비 접합부 0 mm 에서 0.4 도까지 다른 값을 줄 수 있다 (CLAUDE.md 8.7).
+FINE_MESH = dict(snap_mm=1, h_min_mm=1, h_max_mm=20, h_layer_mm=10)
