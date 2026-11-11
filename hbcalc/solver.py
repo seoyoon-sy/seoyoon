@@ -138,6 +138,17 @@ class Solver:
             else:
                 W = np.where(keep, W, 0.0)
         self.rad_elements, self.rad_area, self.rad_W = E, A, W      # 진단용
+        self._apply_network(W)
+
+    def set_exchange_areas(self, W):
+        """요소 간 교환면적 A_i F_ij (m2, 대칭) 를 외부 값(예: VOLTRA .vwf)으로 바꾸고 복사망을 다시 만든다."""
+        self.rad_W = np.asarray(W, float)
+        self._apply_network(self.rad_W)
+
+    def _apply_network(self, W):
+        m, N = self.m, self.N
+        E, A = self.rad_elements, self.rad_area
+        n = len(E)
         Gt, Gs, self.view_sum = grey_network(E, W, A, m.hrb)
         S = sp.csr_matrix((np.ones(n), ([e["node"] for e in E], np.arange(n))), shape=(N, n))
         self.Krad = (S @ sp.csr_matrix(Gt) @ S.T).tocsr()
