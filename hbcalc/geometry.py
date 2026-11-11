@@ -218,5 +218,9 @@ def build_tjunction(spec: TJunction) -> Model:
     if iy_back is not None:
         outputs["ref_back"] = (nx, iy_back)
 
+    meta = dict(xL=xL, xR=xR, W=W, st=st, Yo=Yo, ycum=list(ycum), y_in=y_in, y_top=y_top,
+                y_strip0=y_strip0, y_strip1=y_strip1, layers=[l.material for l in s.layers],
+                partition_material=s.partition_material, strip_material=s.strip_material,
+                offsets_mm=tuple(s.offsets_mm), z_mm=s.z_mm)
     return Model(xe=xedges * MM, ye=yedges * MM, zt=s.z_mm * MM, cid=cid, materials=mats,
-                 zones=zones, outputs=outputs, hrb=s.hrb)
+                 zones=zones, outputs=outputs, hrb=s.hrb, meta=meta)

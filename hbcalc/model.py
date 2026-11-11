@@ -32,6 +32,7 @@ class Model:
     zones: dict                         # {zone id(>0): Zone}
     outputs: dict = field(default_factory=dict)   # {이름: (ix, iy)} 격자선 번호
     hrb: float = 5.25                   # 흑체 복사 열전달계수 W/(m2 K)
+    meta: dict = field(default_factory=dict)   # 형상 좌표(mm) 등 부가 정보 (.vtr 쓰기용)
 
     @property
     def shape(self):
