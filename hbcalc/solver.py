@@ -165,7 +165,9 @@ class Solver:
         G = np.zeros((n, self.N)); b = np.zeros((n, self.N))
         for z in self.zone_ids:
             kind = self.m.zones[z].kind
-            if kind == "outdoor":
+            if bc.zone_values and z in bc.zone_values:
+                Ta, h = (np.broadcast_to(np.asarray(v, float), (n,)) for v in bc.zone_values[z])
+            elif kind == "outdoor":
                 h, Ta = bc.h_out, bc.T_out
             elif kind == "indoor":
                 h, Ta = bc.h_in, bc.T_in

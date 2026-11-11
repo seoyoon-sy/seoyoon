@@ -126,3 +126,16 @@ def test_zone_flows_sum_equals_boundary_flow():
     net0 = sum(F[z][1][0] - F[z][0][0] for z in F)
     scale = max(abs(F[z][1][0] - F[z][0][0]) for z in F)
     assert abs(net0) < 1e-9 * max(scale, 1.0)
+
+
+def test_planar_model_steady_U():
+    from hbcalc.planar import planar_model
+    from hbcalc.presets import TRY3_MATERIALS
+    layers = [("concrete", 200), ("EPS", 180), ("0.5B cement block", 90), ("gypsum", 10)]
+    m = planar_model(layers, TRY3_MATERIALS, hrb=5.1)
+    ho, hi, To, Ti = 16.03, 1.415, -3.7, 20.0
+    s = Solver(m); s.run(Boundary.constant(2, To, Ti, ho, hi), nsteps=1)
+    R = 1 / (hi + 0.9 * 5.1) + 1 / (ho + 0.9 * 5.1) + 0.2 / 1.6 + 0.18 / 0.032 + 0.09 / 0.6 + 0.01 / 0.16
+    q = (Ti - To) / R
+    Ts = Ti - q / (hi + 0.9 * 5.1)
+    assert abs(s.series("surf")[0] - Ts) < 1e-9
