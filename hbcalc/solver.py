@@ -18,9 +18,12 @@ from .radiation import exchange_area, grey_network
 
 
 class Solver:
-    def __init__(self, model: Model, zmode: str = "mid"):
+    def __init__(self, model: Model, zmode: str = "mid", vf_cutoff: float = 0.0, vf_rebalance: str = "sky"):
+        """vf_cutoff: 이 값보다 작은 형상계수(행 기준)는 0으로 버린다 (VOLTRA 의 'smallest accepted view factor' 시험용).
+        vf_rebalance: 버린 만큼을 'sky'(먼 곳)로 보낼지, 'scale'(남은 형상계수를 비례 확대해 행 합을 유지)할지."""
         self.m = model
         self.zmode = zmode
+        self.vf_cutoff, self.vf_rebalance = vf_cutoff, vf_rebalance
         m = model
         nx, ny = m.shape
         self.nx, self.ny = nx, ny
@@ -123,6 +126,17 @@ class Solver:
                 if ((eb["lo"] + eb["hi"]) / 2 - ea["plane"]) * ny1 <= 0: continue
                 W[ia, ib] = W[ib, ia] = exchange_area(ea["lo"], ea["hi"], ea["plane"],
                                                       eb["lo"], eb["hi"], eb["plane"], zt, self.zmode)
+        if self.vf_cutoff > 0:
+            F0 = W / A[:, None]
+            keep = (F0 >= self.vf_cutoff) & (F0.T >= self.vf_cutoff)
+            if self.vf_rebalance == "scale":
+                Fk = np.where(keep, F0, 0.0)
+                with np.errstate(divide="ignore", invalid="ignore"):
+                    f = np.where(Fk.sum(1) > 0, F0.sum(1) / Fk.sum(1), 1.0)
+                Wn = Fk * f[:, None] * A[:, None]
+                W = 0.5 * (Wn + Wn.T)
+            else:
+                W = np.where(keep, W, 0.0)
         self.rad_elements, self.rad_area, self.rad_W = E, A, W      # 진단용
         Gt, Gs, self.view_sum = grey_network(E, W, A, m.hrb)
         S = sp.csr_matrix((np.ones(n), ([e["node"] for e in E], np.arange(n))), shape=(N, n))
