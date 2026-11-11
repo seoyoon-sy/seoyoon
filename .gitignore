@@ -2,3 +2,4 @@ __pycache__/
 *.pyc
 .pytest_cache/
 results/_abs_cache.pkl
+voltra_results/_cmp.pkl

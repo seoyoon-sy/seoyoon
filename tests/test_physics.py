@@ -110,3 +110,19 @@ if __name__ == "__main__":
     for k, f in list(globals().items()):
         if k.startswith("test_"):
             f(); print("통과:", k)
+
+
+def test_zone_flows_sum_equals_boundary_flow():
+    """영역별 노드 열류의 합이 경계 전체 순열류와 같아야 한다 (열류 출력의 일관성)."""
+    from hbcalc.compat_voltra import model_from_vtr
+    m = model_from_vtr(f"{ROOT}/TRY3_Plus_QTest2.vtr")
+    bc = Boundary.from_voltra_files(f"{ROOT}/wall_TO.FTE", f"{ROOT}/Wall_TI.FTE", f"{ROOT}/Wall_HO.FHT",
+                                    f"{ROOT}/Wall_HI.FHT", f"{ROOT}/Wall_IG2.FSG", f"{ROOT}/Wall_ID2.FSD")
+    s = Solver(m); s.run(bc, nsteps=60)
+    tot = sum(q.sum(1) for q in s.zone_node_flows().values())
+    assert np.abs(tot - s.boundary_heat_flow()).max() < 1e-6
+    # 정상상태(첫 시각): 전 영역 순열류의 합 = 0 (실외로 나가는 열 = 실내에서 들어오는 열)
+    F = s.zone_flows_into_out()
+    net0 = sum(F[z][1][0] - F[z][0][0] for z in F)
+    scale = max(abs(F[z][1][0] - F[z][0][0]) for z in F)
+    assert abs(net0) < 1e-9 * max(scale, 1.0)

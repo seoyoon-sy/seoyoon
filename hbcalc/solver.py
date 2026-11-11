@@ -204,3 +204,18 @@ class Solver:
             Ta = self.bc.T_in if zone_kind == "indoor" else self.bc.T_out
             out += h * (self.T_all @ self.conv_A[z] - Ta * self.conv_A[z].sum())
         return out
+
+    def zone_node_flows(self):
+        """경계 영역(zone)별 표면 노드의 구조체 -> 영역 순열류 (n, 노드) W. 양수 = 구조체에서 나감.
+        (K_rad T + G T - b) 를 해당 영역 노드에서만 취한 값. VOLTRA 리포트의 'into/out of object' 와 같은 방식으로
+        노드별 부호를 나눠 합하려면 이 값을 쓴다."""
+        T = self.T_all
+        out = (self.Krad @ T.T).T + self.G_all * T - self.b_all
+        return {z: out[:, self.conv_A[z] > 0] for z in self.zone_ids}
+
+    def zone_flows_into_out(self):
+        """VOLTRA 리포트 형식: {zone: (into_object[W], out_of_object[W])}, 노드별 부호를 나눠 합산."""
+        res = {}
+        for z, q in self.zone_node_flows().items():
+            res[z] = (np.where(q < 0, -q, 0.0).sum(1), np.where(q > 0, q, 0.0).sum(1))
+        return res
