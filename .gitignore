@@ -4,3 +4,4 @@ __pycache__/
 results/_abs_cache.pkl
 voltra_results/_cmp.pkl
 results/psi_endtoend/emu_*.xlsx
+results/accuracy/raw.pkl
