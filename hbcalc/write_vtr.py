@@ -22,7 +22,7 @@ def _fmt(v):
     return f"{v:.4f}".rstrip("0").rstrip(".")
 
 
-def write_vtr(model, template_path, out_path):
+def write_vtr(model, template_path, out_path, calc_s=None):
     m = model.meta
     if not m:
         raise ValueError("model.meta 가 비어 있음: build_tjunction 으로 만든 모델만 지원")
@@ -110,6 +110,8 @@ def write_vtr(model, template_path, out_path):
             for key, val in (("lamb", mt.lam), ("ro", mt.rho), ("c", mt.cp), ("epsi", mt.eps), ("refs", mt.refl)):
                 mm = re.match(rf"^({key}\s*=)(.*)$", l)
                 if mm: l = f"{mm.group(1)}{val:g}"
+        if calc_s is not None and l.startswith("calc="):
+            l = f"calc={int(calc_s)}"          # 계산 기간(초). 3600 이면 첫 스텝(정상상태)과 1시간 뒤만 계산
         out.append(l)
         i += 1
     open(out_path, "wb").write(nl.join(out).encode(enc))
