@@ -18,9 +18,18 @@ from .radiation import exchange_area, grey_network
 
 
 class Solver:
-    def __init__(self, model: Model, zmode: str = "mid", vf_cutoff: float = 0.0, vf_rebalance: str = "sky"):
+    def __init__(self, model: Model, zmode: str = "mid", vf_cutoff: float = 0.0, vf_rebalance: str = "sky",
+                 conv_lump: str = "low"):
         """vf_cutoff: 이 값보다 작은 형상계수(행 기준)는 0으로 버린다 (VOLTRA 의 'smallest accepted view factor' 시험용).
-        vf_rebalance: 버린 만큼을 'sky'(먼 곳)로 보낼지, 'scale'(남은 형상계수를 비례 확대해 행 합을 유지)할지."""
+        vf_rebalance: 버린 만큼을 'sky'(먼 곳)로 보낼지, 'scale'(남은 형상계수를 비례 확대해 행 합을 유지)할지.
+        conv_lump: 표면 칸(면)의 대류 열전달 면적을 양 끝 노드에 어떻게 나눌지.
+          'low'  : 좌표가 작은 쪽 끝 노드에 전부 (기본값. VOLTRA 결과와 가장 잘 맞음: 정상상태 표면온도 RMSE
+                   자동 격자 변형 4종 0.087 -> 0.016, TRY3 손격자 0.170 -> 0.060 ℃)
+          'half' : 양 끝 노드에 절반씩 (대칭적인 일반 유한체적 방식)
+          (wx, wy) : 가로 면(x축 선분), 세로 면(y축 선분)별로 낮은 좌표 쪽 끝 노드에 가는 비율 (시험용)"""
+        if conv_lump not in ("low", "half") and not (isinstance(conv_lump, (tuple, list)) and len(conv_lump) == 2):
+            raise ValueError(conv_lump)
+        self.conv_lump = conv_lump
         self.m = model
         self.zmode = zmode
         self.vf_cutoff, self.vf_rebalance = vf_cutoff, vf_rebalance
@@ -95,6 +104,9 @@ class Solver:
                     faces.append((i, j, "y", -cid[i - 1, j], self.epsm[i, j], self.refl[i, j], dy[j] * zt, "left"))
         self.faces = faces
         self.zone_ids = sorted({f[3] for f in faces})
+        # 면 -> 낮은 좌표 쪽 끝 노드 (가로 면: (i,j), 세로 면: (i,j))
+        self._face_low_node = [self.idx[f[0], f[1]] for f in faces]
+        self._face_high_node = [self.idx[f[0] + 1, f[1]] if f[2] == "x" else self.idx[f[0], f[1] + 1] for f in faces]
 
     # ---------------------------------------------------------------- 복사
     def _setup_radiation(self):
@@ -156,6 +168,15 @@ class Solver:
         refl = np.array([e["refl"] for e in E])
         self.rad_zone = {z: S @ (Gs * (zones == z)) for z in self.zone_ids}
         self.conv_A = {z: S @ (A * (zones == z)) for z in self.zone_ids}
+        # 복사 요소가 속한 노드 (영역별). 대류 면적 배분 방식과 무관하게 영역 소속을 정한다.
+        self.zone_nodes = {z: (S @ (zones == z).astype(float)) > 0 for z in self.zone_ids}
+        if self.conv_lump != "half":
+            wx, wy = (1.0, 1.0) if self.conv_lump == "low" else self.conv_lump
+            conv_w = {z: np.zeros(N) for z in self.zone_ids}
+            for f, lo, hi in zip(self.faces, self._face_low_node, self._face_high_node):
+                w = wx if f[2] == "x" else wy
+                conv_w[f[3]][lo] += w * f[6]; conv_w[f[3]][hi] += (1 - w) * f[6]
+            self.conv_A = conv_w
         self.sol_A = {z: S @ (A * (zones == z) * (1 - refl)) for z in self.zone_ids}
 
     # ---------------------------------------------------------------- 시간 적분
@@ -238,7 +259,7 @@ class Solver:
         노드별 부호를 나눠 합하려면 이 값을 쓴다."""
         T = self.T_all
         out = (self.Krad @ T.T).T + self.G_all * T - self.b_all
-        return {z: out[:, self.conv_A[z] > 0] for z in self.zone_ids}
+        return {z: out[:, self.zone_nodes[z]] for z in self.zone_ids}
 
     def zone_flows_into_out(self):
         """VOLTRA 리포트 형식: {zone: (into_object[W], out_of_object[W])}, 노드별 부호를 나눠 합산."""

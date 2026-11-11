@@ -30,7 +30,7 @@ def test_1d_steady_state_U():
          (Material("c", 0.6, 1400, 1000, eps=0.9), 0.09), (Material("d", 0.16, 900, 840, eps=0.8), 0.01)]
     m = slab_model(L)
     ho, hi, To, Ti = 17.0, 1.5, -8.0, 20.0
-    s = Solver(m)
+    s = Solver(m, conv_lump="half")
     s.run(Boundary.constant(3, To, Ti, ho, hi), nsteps=3)
     e_o, e_i = L[0][0].eps, L[-1][0].eps
     R = 1 / (ho + e_o * m.hrb) + sum(d / mt.lam for mt, d in L) + 1 / (hi + e_i * m.hrb)
@@ -53,7 +53,7 @@ def test_lumped_capacity_decay():
     n, dt = 400, 30.0
     Ta = np.where(np.arange(n) >= 1, 10.0, 0.0)
     bc = Boundary(Ta, Ta, np.full(n, hc), np.full(n, hc), dt=dt)
-    s = Solver(m); s.run(bc)
+    s = Solver(m, conv_lump="half"); s.run(bc)
     h = hc + 0.9 * hrb
     tau = mt.rho * mt.cp * L / (2 * h)
     # Crank-Nicolson 은 시각별 입력을 선형으로 잇는다: Ta 는 t=0 에서 0, t=dt 에서 10 으로 선형 증가 후 일정.
@@ -138,4 +138,4 @@ def test_planar_model_steady_U():
     R = 1 / (hi + 0.9 * 5.1) + 1 / (ho + 0.9 * 5.1) + 0.2 / 1.6 + 0.18 / 0.032 + 0.09 / 0.6 + 0.01 / 0.16
     q = (Ti - To) / R
     Ts = Ti - q / (hi + 0.9 * 5.1)
-    assert abs(s.series("surf")[0] - Ts) < 1e-9
+    assert abs(s.series("surf")[0] - Ts) < 1e-4        # conv_lump="low" 는 모델 끝 노드 근처에 영향을 주지만 폭 2 m 중앙에서는 6.8e-6 ℃

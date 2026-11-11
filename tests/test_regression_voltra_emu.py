@@ -18,7 +18,7 @@ def test_same_as_old(n=200, shift=0.0):
     m = model_from_vtr(vtr).with_properties(lam={"EPS": 0.045, "XPS": 0.3})
     bc = Boundary.from_voltra_files(BC["T01"], BC["T02"], BC["H01"], BC["H02"], BC["G01"], BC["D01"],
                                     solar_shift_h=shift)
-    s = Solver(m)
+    s = Solver(m, conv_lump="half")
     Tnew = s.run(bc, nsteps=n)
     assert Tnew.shape == Told.shape
     err = np.abs(Tnew - Told).max()
