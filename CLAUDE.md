@@ -260,6 +260,14 @@ VOLTRA 없이 동작하는 새 패키지 `hbcalc/`를 만들었다. 아래는 �
 - 보정 곡선 시험: 0 mm 편차는 VOLTRA ΔTs의 매끄러운 함수(상관 -0.88). 난방 39케이스로 맞춘 2차식을 비난방 30케이스에 적용하면 0 mm 평균 절대 편향 0.072에서 0.008 ℃(최대 0.158에서 0.027). 단 TRY3 VOLTRA 격자에서 맞춘 곡선이고, 변형 4종(hbcalc 격자, 강한 열교)의 0 mm 편차는 보정 없이 +-0.016이라 곡선이 격자와 벽체에 종속적이다. 적용하지 않았다.
 - 코드: `examples/accuracy_report.py`(계산, raw.pkl은 gitignore), `examples/accuracy_summary.py`(집계). 결과 표: `results/accuracy/per_case.csv`, `per_position.csv`. 사용자용 정리 문서는 Claude Docs 문서 "열교 표면온도 계산기 정확도 분석 정리"(링크 https://claude.ai/artifact/5BDPN7kN3u8LSQQ95Ga3r8, 사용자 공유 전에는 비공개).
 
+### 8.23 시험 벽체 .vtr 생성 (2026-11-12)
+- 사용자 요청: 열전도율, 밀도, 비열까지 모두 바꾼 새 벽체의 .vtr. 학습 데이터 파이프라인(TRISCO 정상상태 Ψ, VOLTRA 2D 접합부, VOLTRA 평면 벽체로 비열교부)을 위해 벽체마다 접합부와 평면 .vtr가 필요하다. 지금은 데이터셋이 아니라 VOLTRA 재현 코드 시험용이라 파일만 만든다.
+- 산출물 `voltra_inputs/test_walls/`: N1_light, N2_heavy, N3_thin, N4_weak 각각 `*_junction.vtr`(VOLTRA 2D), `*_planar.vtr`(평면 벽체), `wall_definitions.csv`(두께, 물성), `expected_hbcalc.csv`(난방 20 도 고정, 일사 보정 0 기본 설정의 야간 평균 표면온도와 ΔTs), `README.md`. 생성: `python examples/make_test_walls.py`.
+- 새 코드: `hbcalc/write_vtr.py`의 `write_planar_vtr`(평면 .vtr 생성)와 `write_vtr(..., indoor_bc='heating')`(실내온도 경계를 Wall_TI.FTE와 funp 20 2 1440 360 0 0으로 바꿈, 이 짝은 사용자 난방 템플릿 TRY3_Plus_2D.vtr 값), `hbcalc/planar.py`의 `planar_cells`와 `planar_model(cells=...)`. 템플릿 원본은 `voltra_inputs/TRY3_Plus_2D.vtr`로 보관.
+- 시험(tests/test_write_planar_vtr.py, 전체 19개 통과): 템플릿을 같은 칸 수([10, 9, 2, 1])로 재생성하면 파일이 한 줄도 다르지 않음. 새 벽체 평면 .vtr를 읽어 푼 결과가 hbcalc 평면 모델과 1e-6 ℃ 이내. 접합부 .vtr는 물성과 난방 경계가 맞게 들어감.
+- 벽체 구성(두께 mm 콘크리트/EPS/블록/석고, 내벽, 띠): N1 150/120/90/12, 내벽 150, 띠 10. N2 250/220/100/15, 250, 15. N3 180/80/90/10, 180, 10. N4 200/160/90/10, 200, 10(띠 열전도율 0.002). hbcalc ΔTs(평면 - 0 mm): N1 2.80, N2 4.26, N3 4.19, N4 0.44 ℃.
+- 확인하지 못한 것: 평면 .vtr가 VOLTRA에서 열리고 정상 계산되는지(oblk 줄의 y 범위를 표면 위치로 옮긴 것이 맞는지 포함). 접합부 .vtr는 같은 생성기로 만든 이전 변형 4종이 VOLTRA에서 열렸다.
+
 ### 8.20 다음 할 일
 1. 합격 기준 정하기: 학습모델에 VOLTRA 표면온도와 모사 표면온도를 각각 넣어 예측 Ψ 차이를 보고 허용 ΔTs 오차를 역산(6장 4번).
 2. 접합부 편차 원인 진단 계속(8.4의 미시험 후보).
