@@ -51,11 +51,16 @@ def test_new_wall_matches_hbcalc_planar():
 
 def test_test_wall_junction_files():
     files = sorted(glob.glob(f"{ROOT}/voltra_inputs/test_walls/*_junction.vtr"))
-    assert len(files) >= 4
+    assert len(files) >= 6
     for f in files:
         txt = _text(f); m = model_from_vtr(f)
         assert "Wall_TI.FTE" in txt and "Wall_TI_2.FTE" not in txt
         assert len(m.outputs) == 24 and len(m.materials) == 5
+        used = {m.materials[c].name for c in np.unique(m.cid) if c > 0}
+        if "noblock" in f:                                    # 시멘트 블록 없는 벽체: 블록 재료가 어느 셀에도 쓰이지 않는다
+            assert "0.5B cement block" not in used and {"concrete", "EPS", "gypsum", "XPS"} <= used
+        else:
+            assert "0.5B cement block" in used
 
 
 if __name__ == "__main__":

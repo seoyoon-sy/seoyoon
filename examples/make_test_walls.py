@@ -30,6 +30,11 @@ WALLS = {
                 dict(concrete=(1.4, 2000, 840), EPS=(0.038, 20, 1300), block=(0.35, 1100, 920), gypsum=(0.18, 850, 950), XPS=(1.0, 1800, 1000))),
     "N4_weak": ("약한 열교: 띠 열전도율 0.002", [200, 160, 90, 10], 200, 10, 170,
                 dict(concrete=(1.9, 2300, 850), EPS=(0.035, 22, 1400), block=(0.7, 1500, 900), gypsum=(0.20, 750, 1050), XPS=(0.002, 40, 1400))),
+    # 시멘트 블록 없는 벽체(블록 두께 0): 콘크리트 - EPS - 석고. 띠는 EPS 시작면(콘크리트 안쪽 면)에서 시작한다.
+    "N5_noblock": ("블록 없음: 콘크리트 220, EPS 160, 석고 12, 보통 열교", [220, 160, 0, 12], 200, 10, 170,
+                   dict(concrete=(2.0, 2300, 880), EPS=(0.034, 20, 1450), gypsum=(0.21, 900, 1000), XPS=(0.5, 1200, 1000))),
+    "N6_noblock_insstrip": ("블록 없음: 콘크리트 180, EPS 100, 석고 10, 띠가 단열재급(열전도율 0.04)", [180, 100, 0, 10], 180, 10, 170,
+                        dict(concrete=(1.65, 2200, 880), EPS=(0.037, 18, 1400), gypsum=(0.25, 900, 1000), XPS=(0.04, 40, 1450))),
 }
 NAMES = dict(concrete="concrete", EPS="EPS", block="0.5B cement block", gypsum="gypsum", XPS="XPS")
 bc = Boundary.from_voltra_files(*(os.path.join(ROOT, f) for f in ("wall_TO.FTE", "Wall_TI.FTE", "Wall_HO.FHT", "Wall_HI.FHT", "Wall_IG2.FSG", "Wall_ID2.FSD")), solar_shift_h=0.0)
@@ -37,11 +42,11 @@ mk = night_mask(len(bc.T_out))
 rows, desc = [], []
 for key, (text, th, part, strip, ext, props) in WALLS.items():
     mats = {NAMES[k]: M(NAMES[k], *v) for k, v in props.items()}
-    layers = [Layer("concrete", th[0]), Layer("EPS", th[1]), Layer("0.5B cement block", th[2]), Layer("gypsum", th[3])]
+    layers = [Layer(NAMES[k], t) for k, t in zip(("concrete", "EPS", "block", "gypsum"), th) if t > 0]
     spec = replace(try3_spec(snap_mm=1), layers=layers, partition_mm=part, strip_mm=strip, strip_extend_mm=ext, materials=mats)
     mj = build_tjunction(spec)
     pj = write_vtr(mj, TPL_J, os.path.join(OUT, f"{key}_junction.vtr"), indoor_bc="heating")
-    pl = [(NAMES[k], t) for k, t in zip(("concrete", "EPS", "block", "gypsum"), th)]
+    pl = [(NAMES[k], t) for k, t in zip(("concrete", "EPS", "block", "gypsum"), th) if t > 0]
     pp, cells = write_planar_vtr(pl, {n: mats[n] for n, _ in pl}, TPL_P, os.path.join(OUT, f"{key}_planar.vtr"), indoor_bc="heating")
     sj = Solver(mj); sj.run(bc)
     mp = planar_model(pl, {n: mats[n] for n, _ in pl}, cells=cells, width=2.2, nx=44)

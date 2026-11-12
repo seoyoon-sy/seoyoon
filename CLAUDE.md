@@ -273,6 +273,8 @@ VOLTRA 없이 동작하는 새 패키지 `hbcalc/`를 만들었다. 아래는 �
 - 산출물 `voltra_inputs/property_walls/`: P1_light, P2_heavy, P3_mid, P4_weak 각각 `*_junction.vtr`(TRY3_Plus_QTest2.vtr 기반), `*_planar.vtr`(TRY3_Plus_2D.vtr 기반), `wall_definitions.csv`, `expected_hbcalc.csv`, `README.md`. 두께는 TRY3 그대로, 물성은 8.23의 N1 ~ N4와 같은 값. 접합부 파일은 템플릿 대비 재료 줄(lamb, ro, c)과 실내온도 경계 2줄(funn, funp)만 다르고, 평면 파일은 재료 줄만 다름(줄 수 같음, 확인함). 생성: `python examples/make_property_walls.py`.
 - 8.23의 N1 ~ N4(두께도 바꾼 벽체)는 두께가 다른 벽체를 시험할 때 쓴다. 평면 .vtr 생성기는 VOLTRA에서 열리는지 미확인이라, 먼저 이 물성만 바꾼 세트를 열어 보는 것이 안전하다.
 
+- 추가(2026-11-12): 시멘트 블록 없는 벽체 N5_noblock(콘크리트 220, EPS 160, 석고 12, 띠 열전도율 0.5, hbcalc ΔTs 5.59 ℃)와 N6_noblock_insstrip(180, 100, 10, 띠 0.04, ΔTs 3.13 ℃)을 `voltra_inputs/test_walls/`에 추가. 블록 재료 정의는 템플릿대로 남고 어느 셀에도 쓰이지 않음(tests/test_write_planar_vtr.py에서 확인). 사용자 요청으로 밀도와 비열이 일반적인 범위인지 점검했고(README 참고) 바꾼 것은 없다. 사용자는 N1 ~ N4(두께까지 바꾼 세트)를 VOLTRA에서 돌리기로 했다.
+
 ### 8.20 다음 할 일
 1. 합격 기준 정하기: 학습모델에 VOLTRA 표면온도와 모사 표면온도를 각각 넣어 예측 Ψ 차이를 보고 허용 ΔTs 오차를 역산(6장 4번).
 2. 접합부 편차 원인 진단 계속(8.4의 미시험 후보).
