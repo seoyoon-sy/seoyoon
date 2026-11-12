@@ -1,0 +1,42 @@
+{\rtf1\ansi\ansicpg1252\deff0\deftab720{\fonttbl{\f0 Arial;}{\f1 Courier New;}}{\colortbl\red0\green0\blue0;\red255\green0\blue0;\red0\green255\blue0;\red0\green0\blue255;}\paperw11909\paperh16834\margl1000\margr1000\margt1000\margb1000 \plain\ql\f1\fs20\cb0\cf0 
+\par \pard \plain\b\ql\f1\fs20\cb0\cf0 VOLTRA - Report Output\plain\ql\f1\fs20\cb0\cf0 
+\par \pard \plain\ql\f1\fs20\cb0\cf0 \plain\ql\f1\fs20\cb0\cf0 
+\par \pard \plain\ql\f1\fs20\cb0\cf0 VOLTRA data file: G2_fine_sym_weak.vtr\plain\ql\f1\fs20\cb0\cf0 
+\par \pard \plain\ql\f1\fs20\cb0\cf0 \plain\ql\f1\fs20\cb0\cf0 
+\par \pard \plain\ql\f1\fs20\cb0\cf0 Column 1: Time [s]\plain\ql\f1\fs20\cb0\cf0 
+\par \pard \plain\ql\f1\fs20\cb0\cf0 Column 2: Colour 2, sum of heat flows into object [W]\plain\ql\f1\fs20\cb0\cf0 
+\par \pard \plain\ql\f1\fs20\cb0\cf0 Column 3: Colour 2, sum of heat flows out of object [W]\plain\ql\f1\fs20\cb0\cf0 
+\par \pard \plain\ql\f1\fs20\cb0\cf0 Column 4: Colour 1, sum of heat flows into object [W]\plain\ql\f1\fs20\cb0\cf0 
+\par \pard \plain\ql\f1\fs20\cb0\cf0 Column 5: Colour 1, sum of heat flows out of object [W]\plain\ql\f1\fs20\cb0\cf0 
+\par \pard \plain\ql\f1\fs20\cb0\cf0 Column 6: Colour 7, sum of heat flows into object [W]\plain\ql\f1\fs20\cb0\cf0 
+\par \pard \plain\ql\f1\fs20\cb0\cf0 Column 7: Colour 7, sum of heat flows out of object [W]\plain\ql\f1\fs20\cb0\cf0 
+\par \pard \plain\ql\f1\fs20\cb0\cf0 Column 8: Output node 1, temperature [¡ÆC]\plain\ql\f1\fs20\cb0\cf0 
+\par \pard \plain\ql\f1\fs20\cb0\cf0 Column 9: Output node 2, temperature [¡ÆC]\plain\ql\f1\fs20\cb0\cf0 
+\par \pard \plain\ql\f1\fs20\cb0\cf0 Column 10: Output node 3, temperature [¡ÆC]\plain\ql\f1\fs20\cb0\cf0 
+\par \pard \plain\ql\f1\fs20\cb0\cf0 Column 11: Output node 4, temperature [¡ÆC]\plain\ql\f1\fs20\cb0\cf0 
+\par \pard \plain\ql\f1\fs20\cb0\cf0 Column 12: Output node 5, temperature [¡ÆC]\plain\ql\f1\fs20\cb0\cf0 
+\par \pard \plain\ql\f1\fs20\cb0\cf0 Column 13: Output node 6, temperature [¡ÆC]\plain\ql\f1\fs20\cb0\cf0 
+\par \pard \plain\ql\f1\fs20\cb0\cf0 Column 14: Output node 7, temperature [¡ÆC]\plain\ql\f1\fs20\cb0\cf0 
+\par \pard \plain\ql\f1\fs20\cb0\cf0 Column 15: Output node 8, temperature [¡ÆC]\plain\ql\f1\fs20\cb0\cf0 
+\par \pard \plain\ql\f1\fs20\cb0\cf0 Column 16: Output node 9, temperature [¡ÆC]\plain\ql\f1\fs20\cb0\cf0 
+\par \pard \plain\ql\f1\fs20\cb0\cf0 Column 17: Output node 10, temperature [¡ÆC]\plain\ql\f1\fs20\cb0\cf0 
+\par \pard \plain\ql\f1\fs20\cb0\cf0 Column 18: Output node 11, temperature [¡ÆC]\plain\ql\f1\fs20\cb0\cf0 
+\par \pard \plain\ql\f1\fs20\cb0\cf0 Column 19: Output node 12, temperature [¡ÆC]\plain\ql\f1\fs20\cb0\cf0 
+\par \pard \plain\ql\f1\fs20\cb0\cf0 Column 20: Output node 13, temperature [¡ÆC]\plain\ql\f1\fs20\cb0\cf0 
+\par \pard \plain\ql\f1\fs20\cb0\cf0 Column 21: Output node 14, temperature [¡ÆC]\plain\ql\f1\fs20\cb0\cf0 
+\par \pard \plain\ql\f1\fs20\cb0\cf0 Column 22: Output node 15, temperature [¡ÆC]\plain\ql\f1\fs20\cb0\cf0 
+\par \pard \plain\ql\f1\fs20\cb0\cf0 Column 23: Output node 16, temperature [¡ÆC]\plain\ql\f1\fs20\cb0\cf0 
+\par \pard \plain\ql\f1\fs20\cb0\cf0 Column 24: Output node 17, temperature [¡ÆC]\plain\ql\f1\fs20\cb0\cf0 
+\par \pard \plain\ql\f1\fs20\cb0\cf0 Column 25: Output node 18, temperature [¡ÆC]\plain\ql\f1\fs20\cb0\cf0 
+\par \pard \plain\ql\f1\fs20\cb0\cf0 Column 26: Output node 19, temperature [¡ÆC]\plain\ql\f1\fs20\cb0\cf0 
+\par \pard \plain\ql\f1\fs20\cb0\cf0 Column 27: Output node 20, temperature [¡ÆC]\plain\ql\f1\fs20\cb0\cf0 
+\par \pard \plain\ql\f1\fs20\cb0\cf0 Column 28: Output node 21, temperature [¡ÆC]\plain\ql\f1\fs20\cb0\cf0 
+\par \pard \plain\ql\f1\fs20\cb0\cf0 Column 29: Output node 22, temperature [¡ÆC]\plain\ql\f1\fs20\cb0\cf0 
+\par \pard \plain\ql\f1\fs20\cb0\cf0 Column 30: Output node 23, temperature [¡ÆC]\plain\ql\f1\fs20\cb0\cf0 
+\par \pard \plain\ql\f1\fs20\cb0\cf0 Column 31: Output node 24, temperature [¡ÆC]\plain\ql\f1\fs20\cb0\cf0 
+\par \pard \plain\ql\f1\fs20\cb0\cf0 \plain\ql\f1\fs20\cb0\cf0 
+\par \pard \plain\ql\f1\fs20\cb0\cf0        0	    0.00	   20.78	   10.93	    0.54	   10.93	    0.55	   19.06	   18.67	   19.01	   18.67	   18.99	   18.67	   18.97	   18.67	   18.96	   18.66	   18.92	   18.64	   18.89	   18.63	   18.88	   18.62	   18.87	   18.61	   18.89	   18.62	   18.95	  \plain\ql\f1\fs20\cb0\cf0 
+\par \pard \plain\ql\f1\fs20\cb0\cf0 18.68	   19.08	   18.79\plain\ql\f1\fs20\cb0\cf0 
+\par \pard \plain\ql\f1\fs20\cb0\cf0     3600	    0.00	   23.24	   10.81	    0.54	   10.81	    0.54	   19.06	   18.67	   19.00	   18.67	   18.99	   18.67	   18.97	   18.66	   18.95	   18.66	   18.92	   18.64	   18.88	   18.62	   18.87	   18.61	   18.86	   18.61	   18.88	   18.62	   18.95	  \plain\ql\f1\fs20\cb0\cf0 
+\par \pard \plain\ql\f1\fs20\cb0\cf0 18.67	   19.07	   18.79\plain\ql\f1\fs20\cb0\cf0 
+\par \pard }
