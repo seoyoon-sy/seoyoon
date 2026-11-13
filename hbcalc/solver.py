@@ -19,14 +19,23 @@ from .radiation import exchange_area, grey_network
 
 class Solver:
     def __init__(self, model: Model, zmode: str = "mid", vf_cutoff: float = 0.0, vf_rebalance: str = "sky",
-                 conv_lump: str = "low"):
+                 conv_lump="auto"):
         """vf_cutoff: 이 값보다 작은 형상계수(행 기준)는 0으로 버린다 (VOLTRA 의 'smallest accepted view factor' 시험용).
         vf_rebalance: 버린 만큼을 'sky'(먼 곳)로 보낼지, 'scale'(남은 형상계수를 비례 확대해 행 합을 유지)할지.
         conv_lump: 표면 칸(면)의 대류 열전달 면적을 양 끝 노드에 어떻게 나눌지.
-          'low'  : 좌표가 작은 쪽 끝 노드에 전부 (기본값. VOLTRA 결과와 가장 잘 맞음: 정상상태 표면온도 RMSE
+          'auto' : (기본값) 모델에 결로 방지 단열재(XPS 판, meta['strip_material'])가 있으면 그 열전도율에 따라 hbcalc.lump_rule.strip_weight 로
+                   (w, w)를 정하고, 없으면 'low'.
+          'low'  : 좌표가 작은 쪽 끝 노드에 전부 (VOLTRA 결과와 가장 잘 맞음: 정상상태 표면온도 RMSE
                    자동 격자 변형 4종 0.087 -> 0.016, TRY3 손격자 0.170 -> 0.060 ℃)
           'half' : 양 끝 노드에 절반씩 (대칭적인 일반 유한체적 방식)
           (wx, wy) : 가로 면(x축 선분), 세로 면(y축 선분)별로 낮은 좌표 쪽 끝 노드에 가는 비율 (시험용)"""
+        if conv_lump == "auto":
+            conv_lump = "low"
+            sm = model.meta.get("strip_material") if model.meta else None
+            lam_s = [mat.lam for mat in model.materials.values() if mat.name == sm]
+            if lam_s:
+                from .lump_rule import strip_weight
+                w = strip_weight(lam_s[0]); conv_lump = "low" if w >= 1.0 else (w, w)
         if conv_lump not in ("low", "half") and not (isinstance(conv_lump, (tuple, list)) and len(conv_lump) == 2):
             raise ValueError(conv_lump)
         self.conv_lump = conv_lump
