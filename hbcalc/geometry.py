@@ -221,6 +221,7 @@ def build_tjunction(spec: TJunction) -> Model:
     meta = dict(xL=xL, xR=xR, W=W, st=st, Yo=Yo, ycum=list(ycum), y_in=y_in, y_top=y_top,
                 y_strip0=y_strip0, y_strip1=y_strip1, layers=[l.material for l in s.layers],
                 partition_material=s.partition_material, strip_material=s.strip_material,
-                offsets_mm=tuple(s.offsets_mm), z_mm=s.z_mm)
+                offsets_mm=tuple(s.offsets_mm), z_mm=s.z_mm,
+                hand_mesh=(s.x_edges_mm is not None or s.y_edges_mm is not None))
     return Model(xe=xedges * MM, ye=yedges * MM, zt=s.z_mm * MM, cid=cid, materials=mats,
                  zones=zones, outputs=outputs, hrb=s.hrb, meta=meta)

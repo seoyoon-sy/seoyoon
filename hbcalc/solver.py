@@ -35,7 +35,7 @@ class Solver:
             lam_s = [mat.lam for mat in model.materials.values() if mat.name == sm]
             if lam_s:
                 from .lump_rule import strip_weight
-                w = strip_weight(lam_s[0]); conv_lump = "low" if w >= 1.0 else (w, w)
+                w = strip_weight(lam_s[0], "hand" if model.meta.get("hand_mesh") else "auto"); conv_lump = "low" if w >= 1.0 else (w, w)
         if conv_lump not in ("low", "half") and not (isinstance(conv_lump, (tuple, list)) and len(conv_lump) == 2):
             raise ValueError(conv_lump)
         self.conv_lump = conv_lump
