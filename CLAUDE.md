@@ -358,6 +358,11 @@ VOLTRA 없이 동작하는 새 패키지 `hbcalc/`를 만들었다. 아래는 �
 - Crank와 Nicolson(1947), "A practical method for numerical evaluation of solutions of partial differential equations of the heat-conduction type"(18쪽). 앞 3쪽(서론, 시간 미분 대체 방법 I, 공간 미분 대체 방법 II 시작)만 읽었다. VOLTRA 매뉴얼 D.6과 hbcalc가 쓰는 시간 적분(Crank-Nicolson)의 원전이다. 정상상태 t=0에서도 편차가 있으므로 이 시간 적분은 접합부 편차의 원인 후보가 아니다.
 - Patankar, "Numerical Heat Transfer and Fluid Flow"(1980), 스캔본 107장(글자 인식 없음, 파일 이름은 .crdownload지만 PDF로 열림). 책 40 ~ 73쪽(3장 연습문제 끝, 4장 열전도 4.1 ~ 4.6)만 읽었다. 확인한 것: (1) 경계 노드는 반 제어체적을 가지며 대류 경계는 q_B = h(T_f - T_B)를 그 반 제어체적 평형에 넣는다(식 4.15 ~ 4.21). 평평한 표면에서는 표면 칸 면적을 양 끝 노드에 절반씩 주는 것과 같고 hbcalc의 conv_lump='half'가 이 표준 처리다. 'low'는 책에 없는 경험 보정이다. (2) 재료가 바뀌는 계면은 조화평균 전도율(식 4.9)로, 격자 간격에 대한 일반 규칙도 이 책 방식과 일치한다. (3) 면을 격자점 중간에 두는 Practice A(VOLTRA의 격자선 교점 노드와 같은 구조)와 격자점을 제어체적 중심에 두는 Practice B가 구분되며, Practice A는 비균일 격자에서 노드가 제어체적 중심이 아니라 소스항, 전도율 대표값의 정확도가 떨어질 수 있다고 적혀 있다(70쪽). 이 책에는 VOLTRA가 표면 대류와 복사를 노드에 나누는 방식이나 굵은 격자 접합부 오차에 대한 직접 설명은 없다. 새로 시험한 것은 없다.
 
+### 8.32 비교 그림 정리 (2026-11-13)
+- `examples/plot_validation_overview.py`가 모사(현재 기본 설정) 대 VOLTRA 비교 그림 3장을 만든다. (1) `results/fig_voltra_vs_hbcalc_39cases.png`: 난방 39케이스 야간 평균 표면온도 위치별 프로파일, 모든 패널 y축 폭 6.0 도, 눈금 1 도. (2) `results/fig_extra_walls_profile.png`: 추가 벽체 10종(N1 ~ N6 난방 20 도, A ~ D 비난방) 위치별 프로파일. (3) `results/fig_extra_walls_timeseries.png`: 추가 벽체 10종 접합부 0 mm 시간별 시계열(첫 7일)과 오차. 입력 pkl은 compare_test_wall_results.py, compare_variant_results.py가 만든다.
+- 이전 그림(패널마다 y축 폭이 달라 비교가 왜곡됨)을 대체하기 위해 같은 눈금 폭 판(`plot_abs_profile_shared_axis.py`, `plot_abs_profile_many.py`: 12케이스 눈금 1.0과 0.5, 오차 39케이스)도 만들었다.
+- 수치(야간 744시간, 12위치, 모사 - VOLTRA 시간별 평균절대오차): 난방 39케이스 위치평균 중앙값 0.030, 0.05 이하 36개. 추가 벽체 N1 0.023, N2 0.016, N3 0.024, N4 0.030, N5 0.025, N6 0.060, A 0.018, B 0.011, C 0.017, D 0.013 도. 0 mm 편차는 N6만 +0.127로 크고 나머지는 -0.008 ~ +0.044. N6은 시계열에서도 첫 7일 내내 +0.1 ~ +0.15 도 일정하게 높다(8.26의 low 보상 한계).
+
 ### 8.20 다음 할 일
 1. 합격 기준 정하기: 학습모델에 VOLTRA 표면온도와 모사 표면온도를 각각 넣어 예측 Ψ 차이를 보고 허용 ΔTs 오차를 역산(6장 4번).
 2. 접합부 편차 원인 진단 계속(8.4의 미시험 후보).
