@@ -52,11 +52,11 @@ for g, (v, m, n) in G.items():
     axs[1].plot(V, M - V, mkr, color=c, ms=2.2, alpha=0.18, mew=0, rasterized=True)
     e = M - V; rows.append(dict(그룹=g, 케이스수=len(n), 점수=V.size, 평균절대오차=abs(e).mean(), 최대절대오차=abs(e).max(), 평균편차=e.mean(), **{"0.05 초과 %": 100 * (abs(e) > 0.05).mean(), "0.1 초과 %": 100 * (abs(e) > 0.1).mean(), "95퍼센타일 절대오차": np.percentile(abs(e), 95)}))
 axs[0].plot(lim, lim, "-", color=INK, lw=1); axs[0].set_xlim(lim); axs[0].set_ylim(lim); axs[0].set_aspect("equal")
-axs[0].set_xlabel("VOLTRA 야간 평균 표면온도 (℃)"); axs[0].set_ylabel("모사 (℃)"); lg = axs[0].legend(frameon=False, loc="upper left", fontsize=8.5, markerscale=1)
+axs[0].set_xlabel("VOLTRA 야간 시간별 표면온도 (℃)"); axs[0].set_ylabel("모사 (℃)"); lg = axs[0].legend(frameon=False, loc="upper left", fontsize=8.5, markerscale=1)
 [h.set_alpha(1) for h in lg.legend_handles]
 axs[0].set_title("1:1 비교 (검은 선: 일치)", loc="left", fontsize=12, color=INK)
 axs[1].axhspan(-0.05, 0.05, color="#dfe9f7", lw=0, zorder=0); axs[1].axhline(0, color=INK, lw=0.8)
-axs[1].set_xlim(lim); axs[1].set_ylim(-0.6, 0.6); axs[1].set_xlabel("VOLTRA 야간 평균 표면온도 (℃)"); axs[1].set_ylabel("모사 - VOLTRA (℃), 띠 = ±0.05")
+axs[1].set_xlim(lim); axs[1].set_ylim(-0.6, 0.6); axs[1].set_xlabel("VOLTRA 야간 시간별 표면온도 (℃)"); axs[1].set_ylabel("모사 - VOLTRA (℃), 띠 = ±0.05")
 axs[1].set_title("같은 점의 오차", loc="left", fontsize=12, color=INK)
 for ax in axs:
     ax.set_facecolor(SURF); ax.grid(color=GRID, lw=0.7); ax.set_axisbelow(True)
