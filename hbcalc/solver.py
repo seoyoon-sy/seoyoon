@@ -28,7 +28,10 @@ class Solver:
           'low'  : 좌표가 작은 쪽 끝 노드에 전부 (VOLTRA 결과와 가장 잘 맞음: 정상상태 표면온도 RMSE
                    자동 격자 변형 4종 0.087 -> 0.016, TRY3 손격자 0.170 -> 0.060 ℃)
           'half' : 양 끝 노드에 절반씩 (대칭적인 일반 유한체적 방식)
-          (wx, wy) : 가로 면(x축 선분), 세로 면(y축 선분)별로 낮은 좌표 쪽 끝 노드에 가는 비율 (시험용)"""
+          (wx, wy) : 가로 면(x축 선분), 세로 면(y축 선분)별로 낮은 좌표 쪽 끝 노드에 가는 비율 (시험용)
+          'voltra' : VOLTRA 의 표면 처리(CLAUDE.md 8.52). 면(선분)의 반쪽마다 그 반쪽 중점(끝 노드에서 L/4) 온도 (3 Ta + Tb)/4 로
+                     대류와 복사 열교환을 계산해 가까운 노드에 준다. 복사는 면마다 흑체 노드(두 끝 노드 평균 온도와 방사율 저항으로 연결).
+                     VOLTRA 온도장에서 표면 노드 열 평형 잔차 0.001 W/m (경험 보정 없음)"""
         if conv_lump == "auto":
             conv_lump = "low"
             sm = model.meta.get("strip_material") if model.meta else None
@@ -36,6 +39,9 @@ class Solver:
             if lam_s:
                 from .lump_rule import strip_weight
                 w = strip_weight(lam_s[0], "hand" if model.meta.get("hand_mesh") else "auto"); conv_lump = "low" if w >= 1.0 else (w, w)
+        self.voltra = conv_lump == "voltra"
+        if self.voltra:
+            conv_lump = "half"
         if conv_lump not in ("low", "half") and not (isinstance(conv_lump, (tuple, list)) and len(conv_lump) == 2):
             raise ValueError(conv_lump)
         self.conv_lump = conv_lump
@@ -64,6 +70,8 @@ class Solver:
         self._assemble_conduction()
         self._find_faces()
         self._setup_radiation()
+        if self.voltra:
+            self._setup_voltra_surface()
 
     # ---------------------------------------------------------------- 전도
     def _assemble_conduction(self):
@@ -161,6 +169,60 @@ class Solver:
         self.rad_elements, self.rad_area, self.rad_W = E, A, W      # 진단용
         self._apply_network(W)
 
+    def _face_exchange_areas(self):
+        """면(선분) 요소 간 교환면적 A_i F_ij (m2). 같은 zone 의 직각 면만(해석 형상계수, 중간 높이 등)."""
+        m, zt, xe, ye = self.m, self.m.zt, self.m.xe, self.m.ye
+        F = self.faces; nf = len(F)
+        ext = [((xe[f[0]], xe[f[0] + 1], ye[f[1]]) if f[2] == "x" else (ye[f[1]], ye[f[1] + 1], xe[f[0]])) for f in F]
+        W = np.zeros((nf, nf))
+        for ia in range(nf):
+            if F[ia][2] != "x":
+                continue
+            la, ha, pa = ext[ia]
+            for ib in range(nf):
+                if F[ib][2] != "y" or F[ib][3] != F[ia][3]:
+                    continue
+                lb, hb, pb = ext[ib]
+                nx2 = 1 if F[ib][7] == "right" else -1; ny1 = 1 if F[ia][7] == "up" else -1
+                if ((la + ha) / 2 - pb) * nx2 <= 0 or ((lb + hb) / 2 - pa) * ny1 <= 0:
+                    continue
+                W[ia, ib] = W[ib, ia] = exchange_area(la, ha, pa, lb, hb, pb, zt, self.zmode)
+        return W
+
+    def _setup_voltra_surface(self, W=None):
+        """VOLTRA 식 표면 교환(8.52). 면 요소 f: 끝 노드 (a, b), 면적 A_f, 방사율 e. 각 노드는 자기 쪽 반쪽 면(면적 A_f/2)의 중점 온도
+        T_q = (3 T_self + T_other)/4 로 대류와 복사 열교환을 한다.
+          복사: 면 흑체 노드 B_f 가 두 반쪽에 같은 전도 g_f/2 (g_f = e A_f hrb/(1-e))로 연결 -> 면 요소 온도 (Ta+Tb)/2 의 회색면 망(Gt, Gs)을 풀고
+                Krad = B^T Gt B (열량을 두 노드에 절반씩) + sum (g_f/8) [[1,-1],[-1,1]] (끝 노드 온도차에 비례하는 표면 연결)
+          대류: 노드 대각(면적 절반, 기존 half)에 시간 변하는 연결 -(h A_f / 8) [[1,-1],[-1,1]] 를 더한다."""
+        F = self.faces; nf = len(F); N = self.N
+        nodes = np.array([((self.idx[f[0], f[1]], self.idx[f[0] + 1, f[1]]) if f[2] == "x" else (self.idx[f[0], f[1]], self.idx[f[0], f[1] + 1])) for f in F])
+        A = np.array([f[6] for f in F]); eps = np.array([f[4] for f in F]); zone = np.array([f[3] for f in F])
+        W = self._face_exchange_areas() if W is None else np.asarray(W, float)
+        Bm = sp.csr_matrix((np.full(2 * nf, 0.5), (np.repeat(np.arange(nf), 2), nodes.ravel())), shape=(nf, N))
+        E = [dict(eps=e) for e in eps]
+        Gt, Gs, self.view_sum = grey_network(E, W, A, self.m.hrb)
+        g = eps * A * self.m.hrb / (1 - eps)
+        def lap(w):                                           # sum_f w_f [[1,-1],[-1,1]] (노드 N x N)
+            r = np.concatenate([nodes[:, 0], nodes[:, 1], nodes[:, 0], nodes[:, 1]]); c = np.concatenate([nodes[:, 0], nodes[:, 1], nodes[:, 1], nodes[:, 0]])
+            v = np.concatenate([w, w, -w, -w]); return sp.csr_matrix((v, (r, c)), shape=(N, N))
+        self.Krad = (Bm.T @ sp.csr_matrix(Gt) @ Bm + lap(g / 8)).tocsr()
+        self.rad_zone = {z: Bm.T @ (Gs * (zone == z)) for z in self.zone_ids}
+        self.vf_faces = dict(nodes=nodes, A=A, eps=eps, zone=zone, W=W, g=g)
+        self.conv_coupling = {z: lap(A * (zone == z) / 8) for z in self.zone_ids}      # 대류 연결 행렬(h 를 곱해 뺀다)
+        self.conv_A = {z: Bm.T @ (A * (zone == z)) * 1.0 for z in self.zone_ids}       # 대류 대각 면적 = 각 노드에 면적 절반
+        self.rad_W = W
+
+    def _conv_coupling_k(self, k):
+        """시각 k 의 대류 연결 행렬 -(h A_f / 8) L 의 영역 합 (voltra 방식), 없으면 None"""
+        if not self.voltra:
+            return None
+        C = None
+        for z in self.zone_ids:
+            h = float(self._h_zone[z][k]); M = (-h) * self.conv_coupling[z]
+            C = M if C is None else C + M
+        return C
+
     def set_exchange_areas(self, W):
         """요소 간 교환면적 A_i F_ij (m2, 대칭) 를 외부 값(예: VOLTRA .vwf)으로 바꾸고 복사망을 다시 만든다."""
         self.rad_W = np.asarray(W, float)
@@ -192,7 +254,7 @@ class Solver:
     def _bc_terms(self, bc: Boundary, Isol):
         """각 시각의 대각 추가항 G(k) (n,N)과 우변 b(k) (n,N)"""
         n = bc.n
-        G = np.zeros((n, self.N)); b = np.zeros((n, self.N))
+        G = np.zeros((n, self.N)); b = np.zeros((n, self.N)); self._h_zone = {}
         for z in self.zone_ids:
             kind = self.m.zones[z].kind
             if bc.zone_values and z in bc.zone_values:
@@ -204,6 +266,7 @@ class Solver:
             else:
                 raise ValueError(kind)
             A = self.conv_A[z]
+            self._h_zone[z] = np.asarray(h, float)
             G += h[:, None] * A[None, :]
             b += (h * Ta)[:, None] * A[None, :] + Ta[:, None] * self.rad_zone[z][None, :]
             if kind == "outdoor":
@@ -217,6 +280,8 @@ class Solver:
         G, b = self._bc_terms(bc, Isol)
         Kst = (self.Kc + self.Krad).tocsr()
         dt = bc.dt
+        if self.voltra:
+            return self._run_voltra(bc, nT, G, b, Kst, dt)
         T = spl.spsolve((Kst + sp.diags(G[0])).tocsc(), b[0])      # 첫 스텝: 정상상태
         out = np.zeros((nT, self.N)); out[0] = T
         Cd = self.cap / dt
@@ -236,6 +301,20 @@ class Solver:
         self.T_all = out
         self.bc = bc
         self.G_all, self.b_all = G[:nT], b[:nT]
+        return out
+
+    def _run_voltra(self, bc, nT, G, b, Kst, dt):
+        """voltra 방식: 시간에 따라 변하는 대류 연결 행렬이 있어 매 스텝 행렬을 다시 만들어 푼다."""
+        C0 = self._conv_coupling_k(0)
+        T = spl.spsolve((Kst + C0 + sp.diags(G[0])).tocsc(), b[0])
+        out = np.zeros((nT, self.N)); out[0] = T; Cd = self.cap / dt
+        Cprev = C0
+        for k in range(1, nT):
+            Ck = self._conv_coupling_k(k)
+            rhs = Cd * T - 0.5 * ((Kst + Cprev) @ T + G[k - 1] * T) + 0.5 * (b[k - 1] + b[k])
+            base = (sp.diags(Cd + 0.5 * G[k]) + 0.5 * (Kst + Ck)).tocsc()
+            T = spl.splu(base).solve(rhs); out[k] = T; Cprev = Ck
+        self.T_all = out; self.bc = bc; self.G_all, self.b_all = G[:nT], b[:nT]
         return out
 
     # ---------------------------------------------------------------- 후처리
@@ -268,6 +347,9 @@ class Solver:
         노드별 부호를 나눠 합하려면 이 값을 쓴다."""
         T = self.T_all
         out = (self.Krad @ T.T).T + self.G_all * T - self.b_all
+        if self.voltra:
+            for k in range(T.shape[0]):
+                out[k] += self._conv_coupling_k(k) @ T[k]
         return {z: out[:, self.zone_nodes[z]] for z in self.zone_ids}
 
     def zone_flows_into_out(self):

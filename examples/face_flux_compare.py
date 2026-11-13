@@ -29,13 +29,15 @@ for ia in range(nf):
         if ((la + ha) / 2 - pb) * nx2 <= 0 or ((lb + hb) / 2 - pa) * ny1 <= 0: continue
         W[ia, ib] = W[ib, ia] = exchange_area(la, ha, pa, lb, hb, pb, zt, s.zmode)
 Gt, Gs, Fsum = grey_network([dict(eps=f[4]) for f in F], W, A, m.hrb)
-dirmap = {"up": 3, "down": 2, "right": 1, "left": 0}
+def vkey(f):                                   # hbcalc 면 -> .flx 의 (재료 칸 ix, iy, 방향): 위 면은 아래 칸, 오른쪽 면은 왼쪽 칸
+    i, j, ax, side = f[0], f[1], f[2], f[7]
+    return {"up": (i, j - 1, 3), "down": (i, j, 2), "right": (i - 1, j, 1), "left": (i, j, 0)}[side]
 Tavg = np.zeros(nf); qV = np.zeros(nf); ok = np.zeros(nf, bool)
 for k, f in enumerate(F):
     i, j, ax = f[0], f[1], f[2]; n1, n2 = ((i, j), (i + 1, j)) if ax == "x" else ((i, j), (i, j + 1))
     if (n1[0], n1[1], 10) not in V: continue
     Tavg[k] = (V[(n1[0], n1[1], 10)] + V[(n2[0], n2[1], 10)]) / 2
-    z = Q.get((i, j, dirmap[f[7]]), {})
+    z = Q.get(vkey(f), {})
     if 9 in z and 10 in z: qV[k] = 0.5 * (z[9] + z[10]); ok[k] = True
 Ta = np.array([float(bc.T_out[0]) if m.zones[z].kind == "outdoor" else float(bc.T_in[0]) for z in zone]); h = np.array([float(bc.h_out[0]) if m.zones[z].kind == "outdoor" else float(bc.h_in[0]) for z in zone])
 Qrad = (Gt @ Tavg) - Gs * Ta                                  # 요소 복사 순유출 W (기준온도 = 영역 공기온도)
@@ -52,3 +54,8 @@ print("  실내 면 큰 차이 (x구간 mm, 평면 mm, 방향, qH, qV):", [((rou
 radV = qV - h * (Ta - Tavg); radH = -Qrad / A
 for nm, kind in (("실내", "indoor"),):
     sel = ok & (np.array([m.zones[z].kind for z in zone]) == kind); print(f"  {nm} 복사 몫: 면적 가중 합 VOLTRA 역산 {np.sum(radV[sel] * A[sel]):+.3f} W, hbcalc {np.sum(radH[sel] * A[sel]):+.3f} W, 상대 {100 * (np.sum(radH[sel] * A[sel]) / np.sum(radV[sel] * A[sel]) - 1):+.2f} %")
+
+# ---- 면 대응 정정 후 전체 비교와 큰 차이 면
+d2 = (qH - qV); idx = np.where(ok)[0]; o = idx[np.argsort(-abs(d2[idx]))][:10]
+print(f"면 대응 정정 후: 면 {ok.sum()}개 평균 {d2[ok].mean():+.4f}, RMS {np.sqrt((d2[ok] ** 2).mean()):.4f}")
+for k in o: print("   면", F[k][2], F[k][7], "구간 mm", (round(ext[k][0] * 1000), round(ext[k][1] * 1000)), "평면 mm", round(ext[k][2] * 1000), "qH", round(qH[k], 3), "qV", round(qV[k], 3), "차이", round(d2[k], 3))
