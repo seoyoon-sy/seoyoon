@@ -19,10 +19,11 @@ from .radiation import exchange_area, grey_network
 
 class Solver:
     def __init__(self, model: Model, zmode: str = "mid", vf_cutoff: float = 0.0, vf_rebalance: str = "sky",
-                 conv_lump="auto"):
+                 conv_lump="voltra"):
         """vf_cutoff: 이 값보다 작은 형상계수(행 기준)는 0으로 버린다 (VOLTRA 의 'smallest accepted view factor' 시험용).
         vf_rebalance: 버린 만큼을 'sky'(먼 곳)로 보낼지, 'scale'(남은 형상계수를 비례 확대해 행 합을 유지)할지.
-        conv_lump: 표면 칸(면)의 대류 열전달 면적을 양 끝 노드에 어떻게 나눌지.
+        conv_lump: 표면 칸(면)의 대류와 복사 열교환을 노드에 어떻게 줄지. 기본값은 'voltra'(VOLTRA 와 같은 처리, 경험 보정 없음).
+          아래 'auto', 'low', 'half', (wx, wy)는 이전 경험 보정이다(8.19 ~ 8.46). 비교, 회귀 시험용으로 남겨 둔다.
           'auto' : (기본값) 모델에 결로 방지 단열재(XPS 판, meta['strip_material'])가 있으면 그 열전도율에 따라 hbcalc.lump_rule.strip_weight 로
                    (w, w)를 정하고, 없으면 'low'.
           'low'  : 좌표가 작은 쪽 끝 노드에 전부 (VOLTRA 결과와 가장 잘 맞음: 정상상태 표면온도 RMSE
