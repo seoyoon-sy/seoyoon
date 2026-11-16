@@ -12,6 +12,12 @@ TRY3_MATERIALS = {
 }
 
 
+# 사용자가 TRY3 VOLTRA 엑셀 케이스("결로 방지 단열재 X", "단열재 조정 Y")를 돌릴 때 결로 방지 단열재(XPS 판)의 밀도는 25, 비열은 1300이었다(사용자 확인 2026-11-16).
+# 위 TRY3_MATERIALS의 XPS 밀도 2200은 템플릿(.vtr) 기본값이라 이 엑셀 케이스와 다르다. 시간 변화(열용량)에만 영향을 주고 정상상태는 같다.
+# 엑셀 케이스를 비교하는 코드(validate.run_case, compare_surface_temperature)가 이 값으로 덮어쓴다.
+TRY3_EXCEL_XPS_RHO = 25.0
+
+
 def try3_spec(**kw) -> TJunction:
     base = TJunction(
         layers=[Layer("concrete", 200), Layer("EPS", 180), Layer("0.5B cement block", 90), Layer("gypsum", 10)],

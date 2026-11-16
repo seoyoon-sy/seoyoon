@@ -7,7 +7,7 @@ import numpy as np
 import pandas as pd
 from .boundary import Boundary
 from .solver import Solver
-from .presets import try3_model, try3_voltra_mesh_model
+from .presets import try3_model, try3_voltra_mesh_model, TRY3_EXCEL_XPS_RHO
 
 EXCEL_LABELS = [0, 10, 20, 30, 40, 50, 75, 100, 150, 200, 300, 500]    # 엑셀 열 이름(mm)
 SIM_POS_VOLTRA_ORDER = [0, 5, 10, 20, 30, 50, 75, 100, 150, 200, 300, 500]   # VOLTRA onod 순서의 실제 위치(mm)
@@ -45,7 +45,7 @@ def compare_case(df, sim_surf, sim_back, labels, sim_pos, n=744):
     return (M - S)[m], (Mw - W)[m]
 
 
-def run_case(name, bc, mesh="voltra", positions=None, base_lam=None, solver_kw=None, **geom):
+def run_case(name, bc, mesh="voltra", positions=None, base_lam=None, solver_kw=None, xps_rho=TRY3_EXCEL_XPS_RHO, **geom):
     eps, xps = parse_sheet(name)
     lam = {"EPS": eps if eps is not None else 0.032}
     if xps is not None: lam["XPS"] = xps
@@ -54,6 +54,7 @@ def run_case(name, bc, mesh="voltra", positions=None, base_lam=None, solver_kw=N
     if positions is not None:
         geom["offsets_mm"] = tuple(positions)
     model = mk(lam, **geom)
+    if xps_rho is not None: model = model.with_properties(rho={"XPS": xps_rho})
     s = Solver(model, **(solver_kw or {}))
     s.run(bc)
     return s, model

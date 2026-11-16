@@ -13,7 +13,7 @@ sys.path.insert(0, ROOT)
 import numpy as np, pandas as pd
 from hbcalc import Boundary, Solver
 from hbcalc.validate import (EXCEL_LABELS, SIM_POS_VOLTRA_ORDER, load_cases, parse_sheet, night_mask)
-from hbcalc.presets import try3_voltra_mesh_model
+from hbcalc.presets import try3_voltra_mesh_model, TRY3_EXCEL_XPS_RHO
 
 OUT = sys.argv[1] if len(sys.argv) > 1 else os.path.join(ROOT, "results")
 os.makedirs(OUT, exist_ok=True)
@@ -24,29 +24,38 @@ SETS = {"난방": ("Wall_TI.FTE", "voltra_30cases_night420_통합_v2.xlsx"),
 N = 744
 
 
+_BC = {}
+def _bcs(ti):
+    if ti not in _BC:
+        _BC[ti] = {sh: Boundary.from_voltra_files(*(os.path.join(ROOT, f) for f in ("wall_TO.FTE", ti, "Wall_HO.FHT", "Wall_HI.FHT", "Wall_IG2.FSG", "Wall_ID2.FSD")), solar_shift_h=sh) for sh in SHIFTS}
+    return _BC[ti]
+def _solve(task):
+    key, nm, ti, d = task
+    eps, xps = parse_sheet(nm)
+    lam = {"EPS": eps if eps is not None else 0.032}
+    if xps is not None: lam["XPS"] = xps
+    model = try3_voltra_mesh_model(lam).with_properties(rho={"XPS": TRY3_EXCEL_XPS_RHO})
+    s = Solver(model); bcs = _bcs(ti)
+    for sh in SHIFTS:
+        s.run(bcs[sh])
+        d[f"M_surf_{sh}"] = np.array([s.series(f"surf_{p}")[:N] for p in SIM_POS_VOLTRA_ORDER])
+        d[f"M_back_{sh}"] = np.array([s.series(f"back_{p}")[:N] for p in SIM_POS_VOLTRA_ORDER])
+    return (key, nm), d
 def compute():
-    data = {}
+    import multiprocessing as mp
+    tasks = []
     for key, (ti, xlsx) in SETS.items():
         xl, names = load_cases(os.path.join(ROOT, xlsx))
-        bcs = {sh: Boundary.from_voltra_files(*(os.path.join(ROOT, f) for f in
-               ("wall_TO.FTE", ti, "Wall_HO.FHT", "Wall_HI.FHT", "Wall_IG2.FSG", "Wall_ID2.FSD")), solar_shift_h=sh)
-               for sh in SHIFTS}
         for nm in names:
-            eps, xps = parse_sheet(nm)
-            lam = {"EPS": eps if eps is not None else 0.032}
-            if xps is not None: lam["XPS"] = xps
-            model = try3_voltra_mesh_model(lam)
-            s = Solver(model)
             df = xl.parse(nm)
             d = dict(V_surf=np.array([df[f"{p}mm 표면온도(℃)"].values[:N] for p in EXCEL_LABELS]),
                      V_back=np.array([df[f"{p}mm 석고보드 벽체 쪽 표면온도(℃)"].values[:N] for p in EXCEL_LABELS]),
                      T_out=df["실외 온도(℃)"].values[:N], T_in=df["실내 온도(℃)"].values[:N])
-            for sh in SHIFTS:
-                s.run(bcs[sh])
-                d[f"M_surf_{sh}"] = np.array([s.series(f"surf_{p}")[:N] for p in SIM_POS_VOLTRA_ORDER])
-                d[f"M_back_{sh}"] = np.array([s.series(f"back_{p}")[:N] for p in SIM_POS_VOLTRA_ORDER])
-            data[(key, nm)] = d
-            print(key, nm[:40], flush=True)
+            tasks.append((key, nm, ti, d))
+    with mp.Pool(4) as pool:
+        data = {}
+        for k, d in pool.imap(_solve, tasks, chunksize=1):
+            data[k] = d; print(k[0], k[1][:40], flush=True)
     return data
 
 
