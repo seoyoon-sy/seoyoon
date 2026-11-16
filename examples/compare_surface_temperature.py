@@ -13,7 +13,7 @@ sys.path.insert(0, ROOT)
 import numpy as np, pandas as pd
 from hbcalc import Boundary, Solver
 from hbcalc.validate import (EXCEL_LABELS, SIM_POS_VOLTRA_ORDER, load_cases, parse_sheet, night_mask)
-from hbcalc.presets import try3_voltra_mesh_model, TRY3_EXCEL_XPS_RHO
+from hbcalc.presets import try3_voltra_mesh_model, try3_excel_strip_props
 
 OUT = sys.argv[1] if len(sys.argv) > 1 else os.path.join(ROOT, "results")
 os.makedirs(OUT, exist_ok=True)
@@ -34,7 +34,7 @@ def _solve(task):
     eps, xps = parse_sheet(nm)
     lam = {"EPS": eps if eps is not None else 0.032}
     if xps is not None: lam["XPS"] = xps
-    model = try3_voltra_mesh_model(lam).with_properties(rho={"XPS": TRY3_EXCEL_XPS_RHO})
+    rho_, cp_ = try3_excel_strip_props(xps); model = try3_voltra_mesh_model(lam).with_properties(rho={"XPS": rho_}, cp={"XPS": cp_})
     s = Solver(model); bcs = _bcs(ti)
     for sh in SHIFTS:
         s.run(bcs[sh])

@@ -12,10 +12,20 @@ TRY3_MATERIALS = {
 }
 
 
-# 사용자가 TRY3 VOLTRA 엑셀 케이스("결로 방지 단열재 X", "단열재 조정 Y")를 돌릴 때 결로 방지 단열재(XPS 판)의 밀도는 25, 비열은 1300이었다(사용자 확인 2026-11-16).
-# 위 TRY3_MATERIALS의 XPS 밀도 2200은 템플릿(.vtr) 기본값이라 이 엑셀 케이스와 다르다. 시간 변화(열용량)에만 영향을 주고 정상상태는 같다.
-# 엑셀 케이스를 비교하는 코드(validate.run_case, compare_surface_temperature)가 이 값으로 덮어쓴다.
-TRY3_EXCEL_XPS_RHO = 25.0
+# 사용자의 TRY3 VOLTRA 엑셀 케이스에서 결로 방지 단열재(XPS 판) 물성 (사용자 확인 2026-11-16):
+#  - 결로 방지 단열재를 조절한 케이스("결로 방지 단열재 X", X는 1.6이 아님): 밀도 25, 비열 1300, 열전도율만 X.
+#  - 조절하지 않은 케이스(외벽 단열재만 조절한 "단열재 조정 Y" 등)와 "결로 방지 단열재 1.6": 판을 콘크리트와 같은 물성(열전도율 1.6, 밀도 2200, 비열 795)으로 둠.
+# 위 TRY3_MATERIALS의 XPS는 템플릿 값(1.6, 2200, 1300)이라 어느 쪽과도 비열이 다르다. 밀도, 비열은 시간 변화(열용량)에만 영향을 주고 정상상태는 같다.
+TRY3_EXCEL_XPS_RHO = 25.0          # 조절한 케이스의 판 밀도
+TRY3_EXCEL_XPS_CP = 1300.0         # 조절한 케이스의 판 비열
+TRY3_EXCEL_CONCRETE_STRIP = (2200.0, 795.0)   # 조절하지 않은 케이스의 판 밀도, 비열 (콘크리트와 같음)
+
+
+def try3_excel_strip_props(xps_lam):
+    """엑셀 케이스의 결로 방지 단열재 열전도율(없으면 None)에 맞는 판 (밀도, 비열)."""
+    if xps_lam is None or abs(xps_lam - 1.6) < 1e-9:
+        return TRY3_EXCEL_CONCRETE_STRIP
+    return TRY3_EXCEL_XPS_RHO, TRY3_EXCEL_XPS_CP
 
 
 def try3_spec(**kw) -> TJunction:
