@@ -79,16 +79,6 @@ def main():
                 rows.append([nm, "VOLTRA", *d["V_surf"][:, 0]]); rows.append([nm, "모사", *d["M_surf_0.0"][:, 0]])
             pd.DataFrame(rows, columns=["케이스", "구분", *cols_pos]).round(3).to_excel(
                 w, sheet_name=f"{key}_정상상태_t0_표면", index=False)
-        # 대표 케이스 시간별 (난방, 첫 7일)
-        nm0 = "결로 방지 단열재 10"
-        d = data[("난방", nm0)]
-        t = pd.date_range("2026-01-01", periods=N, freq="h")
-        ts = {"시각": t, "실외온도": d["T_out"], "실내온도": d["T_in"]}
-        for i, (l, s) in enumerate(zip(EXCEL_LABELS, SIM_POS_VOLTRA_ORDER)):
-            ts[f"VOLTRA {l}mm열"] = d["V_surf"][i]
-            ts[f"모사(보정0) {s}mm"] = d["M_surf_0.0"][i]
-            ts[f"모사(보정-0.25) {s}mm"] = d["M_surf_-0.25"][i]
-        pd.DataFrame(ts).round(3).to_excel(w, sheet_name="시간별_난방_결로방지10_표면", index=False)
     print("표 저장")
     plots(data)
 
@@ -106,40 +96,7 @@ def plots(data):
     INK, B, O = "#0b0b0b", "#2a78d6", "#eb6834"      # VOLTRA(검정 점), 보정0(파랑), 보정-0.25(주황)
     x = np.arange(12); xt = [f"{l}\n({s})" if l != s else f"{l}" for l, s in zip(EXCEL_LABELS, SIM_POS_VOLTRA_ORDER)]
 
-    # ---- 그림 1: 위치별 야간 평균 표면온도 (난방 4개 케이스)
-    pick = ["결로 방지 단열재 0.0001", "결로 방지 단열재 0.014", "단열재 조정 0.045", "결로 방지 단열재 10"]
-    fig, axs = plt.subplots(2, 2, figsize=(12, 8), sharex=True)
-    for ax, nm in zip(axs.ravel(), pick):
-        d = data[("난방", nm)]
-        v, m0, m1 = night_mean(d["V_surf"]), night_mean(d["M_surf_0.0"]), night_mean(d["M_surf_-0.25"])
-        ax.plot(x, m0, "-", color=B, lw=2, label="모사 (일사 보정 0)")
-        ax.plot(x, m1, "--", color=O, lw=2, label="모사 (일사 보정 -0.25시간)")
-        ax.plot(x, v, "o", color=INK, ms=7, mfc="none", mew=1.6, label="VOLTRA", zorder=5)
-        ax.set_title(nm, loc="left", fontsize=12, color=INK)
-        ax.set_ylabel("야간 평균 실내 표면온도 (℃)")
-        ax.set_xticks(x); ax.set_xticklabels(xt, fontsize=8)
-    h_, l_ = axs[0, 0].get_legend_handles_labels()
-    fig.legend(h_, l_, frameon=False, fontsize=10, loc="upper right", ncol=3, bbox_to_anchor=(0.99, 0.995))
-    for ax in axs[1]: ax.set_xlabel("접합부 면에서 거리 mm: 엑셀 열 이름 (모사 노드 위치)")
-    fig.suptitle("야간(18~07시) 평균 실내 표면온도, 절대값 (난방, 실내 20 ℃ 고정)", x=0.01, ha="left", fontsize=14)
-    fig.tight_layout(rect=[0, 0, 1, 0.95]); fig.savefig(os.path.join(OUT, "fig_abs_profile_heating.png"), dpi=150); plt.close(fig)
-
-    # ---- 그림 2: 시간별 표면온도 (대표 케이스, 1월 첫 7일)
-    nm = "결로 방지 단열재 10"; d = data[("난방", nm)]
-    h = np.arange(7 * 24)
-    fig, axs = plt.subplots(3, 1, figsize=(12, 9), sharex=True)
-    for ax, i in zip(axs, (0, 4, 11)):
-        ax.plot(h, d["M_surf_0.0"][i][:h.size], "-", color=B, lw=1.6, label="모사 (보정 0)")
-        ax.plot(h, d["M_surf_-0.25"][i][:h.size], "--", color=O, lw=1.6, label="모사 (보정 -0.25)")
-        ax.plot(h, d["V_surf"][i][:h.size], ".", color=INK, ms=4, label="VOLTRA")
-        ax.set_ylabel("표면온도 (℃)")
-        ax.set_title(f"엑셀 {EXCEL_LABELS[i]} mm 열 (모사 노드 {SIM_POS_VOLTRA_ORDER[i]} mm)", loc="left", fontsize=11, color=INK)
-    axs[0].legend(frameon=False, ncol=3, fontsize=9, loc="lower right")
-    axs[-1].set_xlabel("1월 1일 0시부터 경과 시간 (h)"); axs[-1].set_xticks(np.arange(0, 169, 24))
-    fig.suptitle(f"시간별 실내 표면온도, 절대값 ({nm}, 난방)", x=0.01, ha="left", fontsize=14)
-    fig.tight_layout(); fig.savefig(os.path.join(OUT, "fig_abs_timeseries.png"), dpi=150); plt.close(fig)
-
-    # ---- 그림 3: 모사 대 VOLTRA 산점도 (모든 케이스 x 위치, 야간 평균)
+    # ---- 그림: 모사 대 VOLTRA 산점도 (모든 케이스 x 위치, 야간 평균)
     fig, axs = plt.subplots(1, 2, figsize=(12, 5.6))
     for ax, sh, c in zip(axs, ("0.0", "-0.25"), (B, O)):
         for key, mk in (("난방", "o"), ("비난방", "^")):
