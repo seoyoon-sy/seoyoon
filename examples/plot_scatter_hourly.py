@@ -53,7 +53,7 @@ sty = {"TRY3 난방": ("o", "#2f6fd0", 4.5), "TRY3 비난방": ("^", "#8fb3e8", 
        "독립 테스트 T1 ~ T8 난방": ("X", "#c2185b", 5), "독립 테스트 T1 ~ T4 비난방": ("*", "#00897b", 6)}
 def metr(V, M):
     e = M - V
-    return dict(MAE=abs(e).mean(), RMSE=np.sqrt((e ** 2).mean()), R2=1 - (e ** 2).sum() / ((V - V.mean()) ** 2).sum(), MAPE=100 * (abs(e) / abs(V)).mean(), 최대=abs(e).max(), g05=100 * (abs(e) > 0.05).mean(), g10=100 * (abs(e) > 0.1).mean())
+    return dict(MAE=abs(e).mean(), RMSE=np.sqrt((e ** 2).mean()), r=np.corrcoef(V, M)[0, 1], R2=1 - (e ** 2).sum() / ((V - V.mean()) ** 2).sum(), MAPE=100 * (abs(e) / abs(V)).mean(), 최대=abs(e).max(), g05=100 * (abs(e) > 0.05).mean(), g10=100 * (abs(e) > 0.1).mean())
 fig = plt.figure(figsize=(14, 10.4), facecolor=SURF); gs = fig.add_gridspec(2, 2, height_ratios=[1.0, 0.46], hspace=0.28, left=0.06, right=0.985, top=0.93, bottom=0.025)
 axs = [fig.add_subplot(gs[0, 0]), fig.add_subplot(gs[0, 1])]; axT = fig.add_subplot(gs[1, :]); axT.axis("off"); rows = []
 allv = np.concatenate([np.concatenate([x.ravel() for x in v]) for v, _, _ in G.values()]); lim = np.array([np.floor(allv.min()) - 0.3, np.ceil(allv.max()) + 0.3])
@@ -67,7 +67,7 @@ tot = metr(np.concatenate(VA), np.concatenate(MA)); rows.append(dict(그룹="전
 axs[0].plot(lim, lim, "-", color=INK, lw=1); axs[0].set_xlim(lim); axs[0].set_ylim(lim); axs[0].set_aspect("equal")
 axs[0].set_xlabel("VOLTRA 야간 시간별 표면온도 (℃)"); axs[0].set_ylabel("모사 (℃)"); lg = axs[0].legend(frameon=False, loc="upper left", fontsize=8, markerscale=1)
 [h.set_alpha(1) for h in lg.legend_handles]
-axs[0].text(0.97, 0.04, f"전체 {rows[-1]['점수']:,}점\nR² {tot['R2']:.4f}   RMSE {tot['RMSE']:.4f} ℃\nMAE {tot['MAE']:.4f} ℃   MAPE {tot['MAPE']:.3f} %", transform=axs[0].transAxes, ha="right", va="bottom", fontsize=10, color=INK,
+axs[0].text(0.97, 0.04, f"전체 {rows[-1]['점수']:,}점\nr {tot['r']:.5f}   R² {tot['R2']:.5f}\nRMSE {tot['RMSE']:.4f} ℃   MAE {tot['MAE']:.4f} ℃\nMAPE {tot['MAPE']:.3f} %", transform=axs[0].transAxes, ha="right", va="bottom", fontsize=10, color=INK,
             bbox=dict(boxstyle="round,pad=0.4", fc="white", ec=GRID))
 axs[0].set_title("1:1 비교 (검은 선: 일치)", loc="left", fontsize=12, color=INK)
 axs[1].axhspan(-0.05, 0.05, color="#dfe9f7", lw=0, zorder=0); axs[1].axhline(0, color=INK, lw=0.8)
@@ -77,16 +77,16 @@ for ax in axs:
     ax.set_facecolor(SURF); ax.grid(color=GRID, lw=0.7); ax.set_axisbelow(True)
     for sp in ("top", "right"): ax.spines[sp].set_visible(False)
 # 아래 표: 그룹별 성능
-cols = [("그룹", 0.0, "left"), ("케이스", 0.33, "right"), ("점수", 0.40, "right"), ("MAE", 0.47, "right"), ("RMSE", 0.54, "right"), ("R²", 0.61, "right"), ("MAPE %", 0.69, "right"), ("최대", 0.76, "right"), ("0.05 초과 %", 0.85, "right"), ("0.1 초과 %", 0.95, "right")]
+cols = [("그룹", 0.0, "left"), ("케이스", 0.30, "right"), ("점수", 0.37, "right"), ("MAE", 0.43, "right"), ("RMSE", 0.49, "right"), ("r", 0.56, "right"), ("R²", 0.63, "right"), ("MAPE %", 0.70, "right"), ("최대", 0.76, "right"), ("0.05 초과 %", 0.86, "right"), ("0.1 초과 %", 0.96, "right")]
 axT.set_xlim(0, 1); axT.set_ylim(0, 1); nr = len(rows) + 1; dy = 1.0 / (nr + 0.6)
 for nme, x, ha in cols: axT.text(x if ha == "left" else x + 0.0, 1 - dy * 0.6, nme, ha=ha, va="center", fontsize=10.5, weight="bold", color=INK)
 axT.plot([0, 1], [1 - dy * 1.1] * 2, color=INK, lw=1)
 for k, r_ in enumerate(rows):
     y = 1 - dy * (k + 1.6); last = r_["그룹"] == "전체"
-    vals = [r_["그룹"], f"{r_['케이스수']}", f"{r_['점수']:,}", f"{r_['MAE']:.4f}", f"{r_['RMSE']:.4f}", f"{r_['R2']:.4f}", f"{r_['MAPE']:.3f}", f"{r_['최대']:.3f}", f"{r_['g05']:.2f}", f"{r_['g10']:.2f}"]
+    vals = [r_["그룹"], f"{r_['케이스수']}", f"{r_['점수']:,}", f"{r_['MAE']:.4f}", f"{r_['RMSE']:.4f}", f"{r_['r']:.5f}", f"{r_['R2']:.5f}", f"{r_['MAPE']:.3f}", f"{r_['최대']:.3f}", f"{r_['g05']:.2f}", f"{r_['g10']:.2f}"]
     for (nme, x, ha), t in zip(cols, vals): axT.text(x, y, t, ha=ha, va="center", fontsize=10, color=INK, weight="bold" if last else "normal")
     if k < len(rows) - 1: axT.plot([0, 1], [y - dy / 2] * 2, color=GRID, lw=0.7)
-axT.text(0, 0.0, "단위 ℃(MAE, RMSE, 최대). R² = 1 - sum(오차²) / sum((V - 평균 V)²), MAPE = mean(|오차| / |V|) x 100 (V는 섭씨 온도라 0 기준이 임의이므로 참고용). 점 하나 = 케이스 x 위치 x 야간 1시간.", fontsize=9, color=MUTED, va="bottom")
+axT.text(0, 0.0, "단위 ℃(MAE, RMSE, 최대). r = 피어슨 상관계수, R² = 1 - sum(오차²) / sum((V - 평균 V)²), MAPE = mean(|오차| / |V|) x 100 (V는 섭씨 온도라 0 기준이 임의이므로 참고용). 점 하나 = 케이스 x 위치 x 야간 1시간.", fontsize=9, color=MUTED, va="bottom")
 fig.suptitle("모사 대 VOLTRA, 케이스 x 위치 x 야간 시간별 표면온도 (현재 기본 설정 voltra, 일사 보정 0, 점 하나 = 1시간)", x=0.01, ha="left", fontsize=14)
 fig.savefig(R("results", "fig_scatter_hourly.png"), dpi=130, facecolor=SURF)
 pd.DataFrame(rows).round(4).to_csv(R("results", "accuracy", "scatter_hourly_summary.csv"), index=False, encoding="utf-8-sig")
