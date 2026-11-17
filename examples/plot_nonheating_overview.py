@@ -7,6 +7,7 @@ import matplotlib; matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 from matplotlib import font_manager as fm
 from matplotlib.ticker import MultipleLocator
+from axis02 import fit_y
 fm.fontManager.addfont("/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc")
 plt.rcParams.update({"font.family": "WenQuanYi Zen Hei", "axes.unicode_minus": False})
 INK, MUTED, GRID, SURF, BLUE = "#1f2328", "#59636e", "#e4e6e8", "#fcfcfb", "#2f6fd0"
@@ -19,8 +20,7 @@ SPAN = 8.0; x = np.arange(12); nr, nc = 4, 8
 fig, axs = plt.subplots(nr, nc, figsize=(21, 11), facecolor=SURF, gridspec_kw={"hspace": 0.5, "wspace": 0.22})
 for k, n in enumerate(order):
     ax = axs[k // nc, k % nc]; v, m = V.loc[n].values, M.loc[n].values
-    lo_, hi_ = min(v.min(), m.min()), max(v.max(), m.max()); assert hi_ - lo_ < SPAN - 0.3, n
-    mid = (lo_ + hi_) / 2; ax.set_ylim(mid - SPAN / 2, mid + SPAN / 2); ax.yaxis.set_major_locator(MultipleLocator(2.0))
+    fit_y(ax, min(v.min(), m.min()), max(v.max(), m.max()))
     ax.plot(x, m, color=BLUE, lw=1.8, zorder=2); ax.plot(x, v, "o", mfc="none", mec=INK, mew=1.3, ms=5.5, zorder=3)
     ax.set_facecolor(SURF); ax.set_title(short(n), loc="left", fontsize=9.5, color=INK)
     for sp in ("top", "right"): ax.spines[sp].set_visible(False)
@@ -32,7 +32,7 @@ for k, n in enumerate(order):
 for k in range(len(order), nr * nc): axs[k // nc, k % nc].axis("off")
 h = [plt.Line2D([], [], color=BLUE, lw=2), plt.Line2D([], [], marker="o", mfc="none", mec=INK, mew=1.4, ls="", ms=7)]
 fig.legend(h, ["모사", "VOLTRA"], frameon=False, fontsize=10, loc="upper right", ncol=2, bbox_to_anchor=(0.99, 0.992))
-fig.suptitle("비난방(실내온도 변동) 30케이스 야간 평균 표면온도: 모사 대 VOLTRA (왼쪽 위 열교 약함, 오른쪽 아래 강함). 패널마다 y축 위치는 다르고 눈금 폭은 모두 8 ℃, 눈금 2 ℃",
+fig.suptitle("비난방(실내온도 변동) 30케이스 야간 평균 표면온도: 모사 대 VOLTRA (왼쪽 위 열교 약함, 오른쪽 아래 강함). y축 눈금 0.2 ℃, 범위는 패널마다 데이터에 맞춤(숫자는 눈금이 많으면 건너뜀)",
              x=0.01, ha="left", fontsize=12.5, color=INK)
 fig.text(0.5, 0.01, "접합부 면에서 거리 mm (0 ~ 500, 12개 위치를 같은 간격으로 표시)", ha="center", fontsize=9.5, color=MUTED)
 fig.subplots_adjust(left=0.035, right=0.995, top=0.91, bottom=0.05)

@@ -12,6 +12,7 @@ import matplotlib; matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 from matplotlib import font_manager as fm
 from matplotlib.ticker import MultipleLocator
+from axis02 import fit_y
 from hbcalc.validate import night_mask
 fm.fontManager.addfont("/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc")
 plt.rcParams.update({"font.family": "WenQuanYi Zen Hei", "axes.unicode_minus": False})
@@ -29,9 +30,7 @@ def style(ax, xt=True, fs=8):
     ax.grid(axis="y", color=GRID, lw=0.7); ax.set_axisbelow(True)
 
 def profile(ax, v, m, title, fs=8):
-    mid = (max(v.max(), m.max()) + min(v.min(), m.min())) / 2
-    assert max(v.max(), m.max()) - min(v.min(), m.min()) < SPAN - 0.3, title
-    ax.set_ylim(mid - SPAN / 2, mid + SPAN / 2); ax.yaxis.set_major_locator(MultipleLocator(1.0))
+    fit_y(ax, min(v.min(), m.min()), max(v.max(), m.max()))
     ax.plot(x, m, color=BLUE, lw=1.8, zorder=2); ax.plot(x, v, "o", mfc="none", mec=INK, mew=1.3, ms=5.5, zorder=3)
     ax.set_xticks(x); style(ax, fs=fs)
     ax.set_title(title, loc="left", fontsize=fs + 1.5, color=INK)
@@ -55,7 +54,7 @@ for k, n in enumerate(order):
     ax.set_xticklabels(["0", "", "", "", "", "50", "", "", "", "", "", "500"], fontsize=7.5, color=MUTED)
 for k in range(len(order), nr * nc): axs[k // nc, k % nc].axis("off")
 legend(fig, y=0.992)
-fig.suptitle("난방 39케이스 야간 평균 표면온도: 모사 대 VOLTRA (왼쪽 위 열교 약함, 오른쪽 아래 강함). 패널마다 y축 위치는 다르지만 눈금 폭은 모두 6.0 ℃, 눈금 1 ℃",
+fig.suptitle("난방 39케이스 야간 평균 표면온도: 모사 대 VOLTRA (왼쪽 위 열교 약함, 오른쪽 아래 강함). y축 눈금 0.2 ℃, 범위는 패널마다 데이터에 맞춤(숫자는 눈금이 많으면 건너뜀)",
              x=0.01, ha="left", fontsize=13, color=INK)
 fig.text(0.5, 0.008, "접합부 면에서 거리 mm (0 ~ 500, 12개 위치를 같은 간격으로 표시)", ha="center", fontsize=9.5, color=MUTED)
 fig.subplots_adjust(left=0.035, right=0.995, top=0.925, bottom=0.04)
@@ -80,7 +79,7 @@ for k, (nm, cond, Vs, Ms, pl) in enumerate(walls):
     ax.text(0.97, 0.05, f"시간별 평균오차 {mae:.3f} ℃\n0 mm 편차 {(m - v)[0]:+.3f} ℃", transform=ax.transAxes, fontsize=8.5, color=INK, ha="right")
     ax.set_xticklabels(XT, fontsize=7.5, color=MUTED)
 legend(fig)
-fig.suptitle("추가 벽체 10종 야간 평균 표면온도: 모사 대 VOLTRA (모든 패널 y축 눈금 폭 6.0 ℃, 눈금 1 ℃)", x=0.01, ha="left", fontsize=13, color=INK)
+fig.suptitle("추가 벽체 10종 야간 평균 표면온도: 모사 대 VOLTRA (y축 눈금 0.2 ℃, 범위는 패널마다 데이터에 맞춤)", x=0.01, ha="left", fontsize=13, color=INK)
 fig.text(0.5, 0.01, "접합부 면에서 거리 mm: 엑셀 열 이름 (모사 노드 위치)", ha="center", fontsize=9.5, color=MUTED)
 fig.subplots_adjust(left=0.04, right=0.995, top=0.89, bottom=0.075)
 fig.savefig(os.path.join(ROOT, "results/fig_extra_walls_profile.png"), dpi=170, facecolor=SURF); plt.close(fig)
@@ -91,13 +90,11 @@ fig, axs = plt.subplots(4, 5, figsize=(19, 11.5), facecolor=SURF, gridspec_kw={"
 EL = 0.3
 for k, (nm, cond, Vs, Ms, pl) in enumerate(walls):
     g, j = divmod(k, 5); a, b = axs[2 * g, j], axs[2 * g + 1, j]
-    TS, tick = (6.0, 1.0) if cond.startswith("난방") else (10.5, 2.0)   # 비난방은 실내온도가 변해 변동 폭이 큼
-    v, m = Vs[:H, 0], Ms[:H, 0]; mid = (max(v.max(), m.max()) + min(v.min(), m.min())) / 2
-    assert max(v.max(), m.max()) - min(v.min(), m.min()) < TS - 0.3, nm
+    v, m = Vs[:H, 0], Ms[:H, 0]
     for ax in (a, b):
         for day in range(8):
             ax.axvspan(day * 24 - 6, day * 24 + 7, color="#eef0f3", zorder=0)   # 야간 18시 ~ 07시(전날 18시부터)
-    a.set_ylim(mid - TS / 2, mid + TS / 2); a.yaxis.set_major_locator(MultipleLocator(tick))
+    fit_y(a, min(v.min(), m.min()), max(v.max(), m.max()))
     a.plot(t, v, color=GRAY, lw=3.2, zorder=2); a.plot(t, m, color=BLUE, lw=1.3, zorder=3)
     a.set_title(f"{nm}  ({cond})", loc="left", fontsize=10, color=INK)
     e = m - v
@@ -110,7 +107,7 @@ for k, (nm, cond, Vs, Ms, pl) in enumerate(walls):
     if j == 0: a.set_ylabel("0 mm 표면온도 (℃)", fontsize=9, color=MUTED); b.set_ylabel("모사 - VOLTRA (℃)", fontsize=9, color=MUTED)
 h = [plt.Line2D([], [], color=GRAY, lw=3.2), plt.Line2D([], [], color=BLUE, lw=1.4)]
 fig.legend(h, ["VOLTRA", "모사"], frameon=False, fontsize=10, loc="upper right", ncol=2, bbox_to_anchor=(0.99, 0.995))
-fig.suptitle("추가 벽체 10종 접합부 0 mm 표면온도 시계열(첫 7일): 위 절대값(난방 y축 폭 6 ℃ 눈금 1 ℃, 비난방 폭 10.5 ℃ 눈금 2 ℃), 아래 오차(띠 ±0.05 ℃). 회색 배경이 야간(18 ~ 07시)", x=0.01, ha="left", fontsize=13, color=INK)
+fig.suptitle("추가 벽체 10종 접합부 0 mm 표면온도 시계열(첫 7일): 위 절대값(y축 눈금 0.2 ℃, 범위는 패널마다 데이터에 맞춤), 아래 오차(띠 ±0.05 ℃). 회색 배경이 야간(18 ~ 07시)", x=0.01, ha="left", fontsize=13, color=INK)
 fig.subplots_adjust(left=0.05, right=0.995, top=0.925, bottom=0.04)
 fig.savefig(os.path.join(ROOT, "results/fig_extra_walls_timeseries.png"), dpi=150, facecolor=SURF); plt.close(fig)
 
