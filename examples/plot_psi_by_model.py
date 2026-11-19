@@ -1,6 +1,6 @@
 """모사 표면온도가 Ψ 예측에 주는 영향을 모델별, 케이스별로 본다 (모델 평균이나 부호 있는 오차의 평균으로 가리지 않는다).
 입력: results/psi_endtoend/test.pkl, loco.pkl (psi_endtoend.py 결과, 일사 보정 0, 독립 테스트 10케이스 Model A 포함)
-출력: results/fig_psi_pred_by_model.png   모델 5개 x (정답 대 예측, 부호 있는 오차 %)
+출력: results/fig_psi_pred_by_model.png   모델 5개 x (정답 대 예측, 부호 있는 오차 %). A(VOLTRA만)와 D(모사만)만 보여 준다
       results/fig_psi_delta_by_model.png  모사로 바꿨을 때 예측이 달라진 양(B, C, D - A, 케이스 x 모델)
       results/accuracy/psi_effect_by_model.csv  모델별, 시나리오별 오차 (케이스 단위와 야간 단위의 평균절대, 최대절대)
 사용: python examples/plot_psi_by_model.py"""
@@ -39,14 +39,14 @@ tab = pd.DataFrame(rows); tab.round(3).to_csv(os.path.join(ROOT, "results", "acc
 # ---------------- 그림 1: 모델별 정답 대 예측과 부호 있는 오차
 fig, axs = plt.subplots(2, 5, figsize=(21, 9.4), facecolor=SURF, gridspec_kw={"height_ratios": [1.15, 1], "hspace": 0.38, "wspace": 0.22, "left": 0.045, "right": 0.99, "top": 0.78, "bottom": 0.16})
 fig.text(0.02, 0.955, "모델별로 본 정답 대 예측 (모델 평균 없음)", fontsize=20, weight="bold", color=INK)
-fig.text(0.02, 0.915, "점 하나 = 케이스 하나의 야간 평균 예측. 위: 정답 Ψ 대 예측 Ψ. 아래: 같은 점의 부호 있는 오차 (예측 - 정답) / 정답, %. 네 시나리오 점이 겹쳐 보이면 시나리오 사이 차이가 작다는 뜻이다. 독립 테스트 10케이스(Model A 포함), 일사 보정 0", fontsize=11.5, color=MUTED)
-xs = np.arange(len(cases)); lim = [0.3, 0.85]
+fig.text(0.02, 0.915, "점 하나 = 케이스 하나의 야간 평균 예측. 위: 정답 Ψ 대 예측 Ψ. 아래: 같은 점의 부호 있는 오차 (예측 - 정답) / 정답, %. A와 D 점이 겹쳐 보이면 VOLTRA 대신 모사를 써도 차이가 작다는 뜻이다. B, C는 psi_effect_by_model.csv에 있다. 독립 테스트 10케이스(Model A 포함), 일사 보정 0", fontsize=11.5, color=MUTED)
+xs = np.arange(len(cases)); lim = [0.3, 0.85]; SHOW1 = "AD"
 for j, m in enumerate(MODELS):
     a1, a2 = axs[0, j], axs[1, j]
-    for s in "ABCD":
+    for s in SHOW1:
         p = P(m, s).values; a = np.array([act[c] for c in cases])
         a1.scatter(a, p, marker=MK[s], s=SZ[s], facecolor="none" if s in "ABC" else COL[s], edgecolor=COL[s], lw=1.5, zorder=3, label=SC[s] if j == 0 else None)
-        a2.scatter(xs + {"A": -0.24, "B": -0.08, "C": 0.08, "D": 0.24}[s], (p - a) / a * 100, marker=MK[s], s=SZ[s] * 0.8, facecolor="none" if s in "ABC" else COL[s], edgecolor=COL[s], lw=1.4, zorder=3)
+        a2.scatter(xs + {"A": -0.14, "D": 0.14}[s], (p - a) / a * 100, marker=MK[s], s=SZ[s] * 0.8, facecolor="none" if s in "ABC" else COL[s], edgecolor=COL[s], lw=1.4, zorder=3)
     a1.plot(lim, lim, color=INK, lw=1); a1.set_xlim(lim); a1.set_ylim(lim); a1.set_aspect("equal"); a1.grid(color=GRID, lw=0.7); a1.set_axisbelow(True)
     a1.set_xlabel("정답 Ψ (TRISCO, W/(m·K))", fontsize=10, color=MUTED)
     if j == 0: a1.set_ylabel("예측 Ψ", fontsize=10.5, color=MUTED)
@@ -57,7 +57,7 @@ for j, m in enumerate(MODELS):
     for a_ in (a1, a2):
         a_.set_facecolor(SURF)
         for sp_ in ("top", "right"): a_.spines[sp_].set_visible(False)
-fig.legend(*axs[0, 0].get_legend_handles_labels(), loc="upper right", ncol=4, frameon=False, fontsize=11.5, bbox_to_anchor=(0.99, 0.88))
+fig.legend(*axs[0, 0].get_legend_handles_labels(), loc="upper right", ncol=2, frameon=False, fontsize=11.5, bbox_to_anchor=(0.99, 0.88))
 fig.savefig(os.path.join(ROOT, "results", "fig_psi_pred_by_model.png"), dpi=125, facecolor=SURF); plt.close(fig)
 # ---------------- 그림 2: 모사로 바꾸면 예측이 얼마나 달라지나 (케이스 x 모델, 부호 있는 변화 %p)
 fig, axs = plt.subplots(1, 3, figsize=(19, 6.8), facecolor=SURF, gridspec_kw={"wspace": 0.22, "left": 0.12, "right": 0.97, "top": 0.8, "bottom": 0.09})
