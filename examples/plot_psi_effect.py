@@ -1,6 +1,6 @@
 """모사 표면온도가 선형열관류율(Ψ) 예측 성능에 주는 영향: 사용자 학습 코드(training/psi_model_v6_3.py)를 그대로 통과시킨 종단 시험(examples/psi_endtoend.py) 결과를 그림과 표로 정리.
 시나리오: A 학습 VOLTRA 시험 VOLTRA(기준), B 학습 VOLTRA 시험 모사, C 학습 모사 시험 VOLTRA, D 학습 모사 시험 모사. 일사 보정 0, 2변수(C, A) 모델 5개.
-정답 Ψ는 정상상태_정답.xlsx(TRISCO). 독립 테스트 9케이스(Model A 제외), LOCO(30fold).
+정답 Ψ는 정상상태_정답.xlsx(TRISCO). 독립 테스트 10케이스(Model A 포함), LOCO(30fold).
 출력: results/fig_psi_effect.png, results/accuracy/psi_effect_summary.csv
 사용: python examples/plot_psi_effect.py"""
 import os, sys
@@ -48,7 +48,7 @@ def bars(ax, d, title):
     ax.set_title(title, loc="left", fontsize=13.5, color=INK); ax.set_facecolor(SURF)
     for sp in ("top", "right"): ax.spines[sp].set_visible(False)
     ax.axvline(4.5, color=GRID, lw=1.2)
-ax1 = fig.add_subplot(gs[0, 0]); bars(ax1, te, "독립 테스트 (9케이스): 모델별 평균 오차율"); ax1.legend(frameon=False, fontsize=9.5, loc="upper right", ncol=1)
+ax1 = fig.add_subplot(gs[0, 0]); bars(ax1, te, "독립 테스트 (10케이스): 모델별 평균 오차율"); ax1.legend(frameon=False, fontsize=9.5, loc="upper right", ncol=1)
 ax2 = fig.add_subplot(gs[0, 1]); bars(ax2, lo, "LOCO (30fold, 케이스 단위 교차검증): 모델별 평균 오차율")
 for a in (ax1, ax2): a.set_ylim(0, max(a.get_ylim()[1], 8.5))
 # 정답 대 예측 (5개 모델 평균 예측, 독립 테스트)
@@ -59,7 +59,7 @@ for k in SCEN:
     ax3.scatter(g.actual, g.pred, marker=mk[k], s=sz[k], facecolor="none" if k in "ABC" else COL[k], edgecolor=COL[k], lw=1.6, zorder=4 if k == "D" else 3, label=SCEN[k])
 lim = [0.3, 0.85]; ax3.plot(lim, lim, color=INK, lw=1); ax3.set_xlim(lim); ax3.set_ylim(lim); ax3.set_aspect("equal"); ax3.grid(color=GRID, lw=0.7)
 ax3.set_xlabel("정답 Ψ (TRISCO 정상상태, W/(m·K))", fontsize=11, color=MUTED); ax3.set_ylabel("예측 Ψ (5개 모델 평균)", fontsize=11, color=MUTED)
-ax3.set_title("독립 테스트 9케이스: 정답 대 예측 (네 시나리오가 거의 겹친다)", loc="left", fontsize=13.5, color=INK)
+ax3.set_title("독립 테스트 10케이스: 정답 대 예측 (네 시나리오가 거의 겹친다)", loc="left", fontsize=13.5, color=INK)
 for sp in ("top", "right"): ax3.spines[sp].set_visible(False)
 ax3.legend(frameon=False, fontsize=9.5, loc="upper left")
 # 표
@@ -80,9 +80,9 @@ notes = ["오차율 = |예측 Ψ - 정답 Ψ| / 정답 Ψ x 100. 독립 테스�
          "LOCO는 30케이스를 하나씩 빼며 학습한 야간 단위 예측. Ψ RMSE 단위 W/(m·K).",
          "모델: 사용자 코드의 2차 회귀, ANN, KNN, RF, SVR. 입력은 C(실내온도 - 실외온도),",
          "A(비열교부 - 열교부 표면온도). 정답 Ψ는 TRISCO 정상상태 표.",
-         "한계: 독립 테스트 9케이스, 시드 한 번. 학습모델 자체의 케이스별 편향",
+         "한계: 독립 테스트 10케이스, 시드 한 번. 학습모델 자체의 케이스별 편향",
          "(예: 조정 0.07 케이스 약 +12 %)은 A에도 똑같이 있다.",
-         "시나리오 간 차이(독립 -0.07 ~ +0.08 %p, LOCO 0.02 %p 이내)는",
+         "시나리오 간 차이(독립 -0.01 ~ +0.10 %p, LOCO 0.03 %p 이내)는",
          "표본 흔들림 범위일 수 있다."]
 for j, t in enumerate(notes): axT.text(0, 0.28 - j * 0.037 - (0.012 if j >= 2 else 0) - (0.012 if j >= 4 else 0) - (0.012 if j >= 6 else 0), t, fontsize=9.3, color=MUTED, va="top")
 fig.savefig(os.path.join(ROOT, "results", "fig_psi_effect.png"), dpi=130, facecolor=SURF); plt.close(fig)
