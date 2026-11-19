@@ -19,7 +19,7 @@ from .radiation import exchange_area, grey_network
 
 class Solver:
     def __init__(self, model: Model, zmode: str = "mid", vf_cutoff: float = 0.0, vf_rebalance: str = "sky",
-                 conv_lump="voltra"):
+                 conv_lump="voltra", z_blend: float = 0.0):
         """vf_cutoff: 이 값보다 작은 형상계수(행 기준)는 0으로 버린다 (VOLTRA 의 'smallest accepted view factor' 시험용).
         vf_rebalance: 버린 만큼을 'sky'(먼 곳)로 보낼지, 'scale'(남은 형상계수를 비례 확대해 행 합을 유지)할지.
         conv_lump: 표면 칸(면)의 대류와 복사 열교환을 노드에 어떻게 줄지. 기본값은 'voltra'(VOLTRA 와 같은 처리, 경험 보정 없음).
@@ -48,6 +48,7 @@ class Solver:
         self.conv_lump = conv_lump
         self.m = model
         self.zmode = zmode
+        self.z_blend = float(z_blend)   # voltra 방식 형상계수: (1 - z_blend) x 중간 높이(mid) + z_blend x 깊이 평균(avg). 8.65
         self.vf_cutoff, self.vf_rebalance = vf_cutoff, vf_rebalance
         m = model
         nx, ny = m.shape
@@ -199,7 +200,15 @@ class Solver:
         F = self.faces; nf = len(F); N = self.N
         nodes = np.array([((self.idx[f[0], f[1]], self.idx[f[0] + 1, f[1]]) if f[2] == "x" else (self.idx[f[0], f[1]], self.idx[f[0], f[1] + 1])) for f in F])
         A = np.array([f[6] for f in F]); eps = np.array([f[4] for f in F]); zone = np.array([f[3] for f in F])
-        W = self._face_exchange_areas() if W is None else np.asarray(W, float)
+        if W is None:
+            W = self._face_exchange_areas()
+            if self.z_blend > 0:
+                z0 = self.zmode; self.zmode = "avg"
+                try: Wa = self._face_exchange_areas()
+                finally: self.zmode = z0
+                W = (1 - self.z_blend) * W + self.z_blend * Wa
+        else:
+            W = np.asarray(W, float)
         Bm = sp.csr_matrix((np.full(2 * nf, 0.5), (np.repeat(np.arange(nf), 2), nodes.ravel())), shape=(nf, N))
         E = [dict(eps=e) for e in eps]
         Gt, Gs, self.view_sum = grey_network(E, W, A, self.m.hrb)
