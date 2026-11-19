@@ -1,4 +1,4 @@
-"""모사 대 VOLTRA 산점도(케이스 x 위치별 야간 평균 표면온도): TRY3 난방 39, 비난방 30케이스에 추가 벽체(N1 ~ N6 난방과 비난방, 변형 A ~ D 비난방)를 함께 그린다.
+"""모사 대 VOLTRA 산점도(케이스 x 위치별 야간 평균 표면온도): TRY3 난방 40(Model A 포함), 비난방 30케이스에 추가 벽체(N1 ~ N6 난방과 비난방, 변형 A ~ D 비난방)를 함께 그린다.
 왼쪽 1:1 산점도, 오른쪽은 같은 점의 오차(모사 - VOLTRA) 대 VOLTRA 온도. 모사는 현재 기본 설정(conv_lump='auto', 일사 보정 0).
 입력: results/_abs_cache.pkl, voltra_results/test_walls/*_junction.txt, voltra_results/test_walls_nonheating/*_junction.txt, voltra_results/{A_EPS100,..}.txt
 출력: results/fig_abs_scatter.png (이전 일사 보정 -0.25 판을 대체), results/accuracy/scatter_all_summary.csv"""
@@ -15,6 +15,7 @@ from hbcalc.presets import try3_spec
 from hbcalc.validate import night_mask
 from hbcalc.voltra_report import read_report
 import test_walls_def as T
+import model_a_def
 fm.fontManager.addfont("/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc")
 plt.rcParams.update({"font.family": "WenQuanYi Zen Hei", "axes.unicode_minus": False})
 INK, MUTED, GRID, SURF = "#1f2328", "#59636e", "#e4e6e8", "#fcfcfb"
@@ -29,6 +30,10 @@ def add(g, name, V, M):
 cache = pickle.load(open(R("results", "_abs_cache.pkl"), "rb"))
 for (cond, name), d in cache.items():
     add(f"TRY3 {cond}", name, nm(d["V_surf"].T), nm(d["M_surf_0.0"].T))
+# Model A (사용자 정의 파일 TRY3_INS_160_ver2.vtr, 난방)는 TRY3 난방 그룹에 포함 (39 + 1 = 40케이스)
+_ma = model_a_def.get(0.0); _xa = pd.ExcelFile(R("voltra_30cases_night420_통합_v2.xlsx")).parse("Model A")
+_Va = np.array([_xa[f"{p}mm 표면온도(℃)"].values[:N] for p in (0, 10, 20, 30, 40, 50, 75, 100, 150, 200, 300, 500)]).T
+add("TRY3 난방", "Model A", nm(_Va), nm(_ma["M_surf"].T))
 def run(model, bc):
     s = Solver(model); s.run(bc, nsteps=N); return np.array([s.series(f"surf_{p}")[:N] for p in POS]).T
 for key in T.WALLS:
