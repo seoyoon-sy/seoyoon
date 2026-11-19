@@ -15,6 +15,7 @@ from hbcalc.presets import try3_spec
 from hbcalc.validate import night_mask
 from hbcalc.voltra_report import read_report
 import test_walls_def as T
+import model_a_def
 fm.fontManager.addfont("/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc")
 plt.rcParams.update({"font.family": "WenQuanYi Zen Hei", "axes.unicode_minus": False})
 INK, MUTED, GRID, SURF = "#1f2328", "#59636e", "#e4e6e8", "#fcfcfb"
@@ -48,9 +49,13 @@ if os.path.exists(ip):
     for cond, g in (("heating", "독립 테스트 T1 ~ T8 난방"), ("nonheating", "독립 테스트 T1 ~ T4 비난방")):
         for (nme, c_), d_ in sorted(dd.items()):
             if c_ == cond: add(g, nme, nm(d_["V"]), nm(d_["voltra"]))
+# Model A (사용자 정의 파일 TRY3_INS_160_ver2.vtr, 난방): 접합부 모사와 VOLTRA 엑셀 시트 'Model A'의 12위치 표면온도
+_ma = model_a_def.get(0.0); _xa = pd.ExcelFile(R("voltra_30cases_night420_통합_v2.xlsx")).parse("Model A")
+_Va = np.array([_xa[f"{p}mm 표면온도(℃)"].values[:N] for p in (0, 10, 20, 30, 40, 50, 75, 100, 150, 200, 300, 500)]).T
+add("Model A 난방", "Model A", nm(_Va), nm(_ma["M_surf"].T))
 sty = {"TRY3 난방": ("o", "#2f6fd0", 4.5), "TRY3 비난방": ("^", "#8fb3e8", 4.5),
        "추가 벽체 난방 (N1 ~ N6)": ("s", "#e8590c", 5), "추가 벽체 비난방 (N1 ~ N6)": ("D", "#2b9348", 5), "변형 A ~ D 비난방": ("P", "#7b2cbf", 6),
-       "독립 테스트 T1 ~ T8 난방": ("X", "#c2185b", 5), "독립 테스트 T1 ~ T4 비난방": ("*", "#00897b", 6)}
+       "독립 테스트 T1 ~ T8 난방": ("X", "#c2185b", 5), "독립 테스트 T1 ~ T4 비난방": ("*", "#00897b", 6), "Model A 난방": ("h", "#6d4c41", 6)}
 def metr(V, M):
     e = M - V
     return dict(MAE=abs(e).mean(), RMSE=np.sqrt((e ** 2).mean()), r=np.corrcoef(V, M)[0, 1], R2=1 - (e ** 2).sum() / ((V - V.mean()) ** 2).sum(), MAPE=100 * (abs(e) / abs(V)).mean(), 최대=abs(e).max(), g05=100 * (abs(e) > 0.05).mean(), g10=100 * (abs(e) > 0.1).mean())
