@@ -1,7 +1,7 @@
 """끝에서 끝까지 시험: VOLTRA 표면온도 대신 hbcalc 표면온도를 사용자의 학습 코드(training/psi_model_v6_3.py)에 넣었을 때
 정답 Ψ(정상상태_정답.xlsx) 예측이 얼마나 달라지는가.
 사용자 코드는 수정하지 않고, 경로만 바꿔서 불러온다. 모사 결과는 VOLTRA 엑셀과 같은 형식의 엑셀로 만들어 같은 전처리를 거친다.
-전제: results/_abs_cache.pkl (python examples/compare_surface_temperature.py 로 생성). 독립 테스트는 Model A 를 제외한 9개.
+전제: results/_abs_cache.pkl (python examples/compare_surface_temperature.py 로 생성). 독립 테스트는 사용자 코드의 10케이스(Model A 포함).
 사용: python examples/psi_endtoend.py [출력폴더]"""
 import os, sys, re, pickle, types, warnings
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -25,8 +25,9 @@ def load_user_module():
     return mod
 
 
+import model_a_def
 M = load_user_module()
-TEST9 = [c for c in M.TEST_CASES if c[0] != "Model A"]
+TESTS = list(M.TEST_CASES)                   # 사용자 시험 10케이스 (Model A 포함: 정의 파일 TRY3_INS_160_ver2.vtr 를 받은 뒤)
 DEPTHS = M.DEPTHS
 N = 744
 BCF = {"난방": "Wall_TI.FTE", "비난방": "Wall_TI_2.FTE"}
@@ -59,6 +60,11 @@ def make_emulator_excels(cache, shift):
             dfp = pd.DataFrame({"실외 온도(℃)": To, "실내 온도(℃)": Ti, "비열교부 표면온도(℃)": P, "비열교부 석고보드 국부 열류량(W/m2)": 0.0,
                                  "실내로 들어오는 열류량1(W)": 0.0, "실내에서 나가는 열류량1(W)": 0.0, "실내로 들어오는 열류량2(W)": 0.0, "실내에서 나가는 열류량2(W)": 0.0})
             dfp.to_excel(wp, sheet_name=M.NAME_MAP_TO_PLANAR.get(nm, nm)[:31], index=False)
+        ma = model_a_def.get(shift)                     # Model A: 정의 파일에서 읽은 접합부와 EPS 160 mm 평면 벽체
+        df = pd.DataFrame({f"{p} 표면온도(℃)": ma["M_surf"][i] for i, p in enumerate(DEPTHS)}); df["실외 온도(℃)"], df["실내 온도(℃)"] = ma["T_out"], ma["T_in"]
+        df.to_excel(wm, sheet_name="Model A", index=False)
+        pd.DataFrame({"실외 온도(℃)": ma["T_out"], "실내 온도(℃)": ma["T_in"], "비열교부 표면온도(℃)": ma["M_planar"], "비열교부 석고보드 국부 열류량(W/m2)": 0.0,
+                      "실내로 들어오는 열류량1(W)": 0.0, "실내에서 나가는 열류량1(W)": 0.0, "실내로 들어오는 열류량2(W)": 0.0, "실내에서 나가는 열류량2(W)": 0.0}).to_excel(wp, sheet_name=M.NAME_MAP_TO_PLANAR.get("Model A", "Model A")[:31], index=False)
     with pd.ExcelWriter(paths["nh_tsi"]) as wt, pd.ExcelWriter(paths["nh_q2d"]) as wq:
         for nm in names_n:
             d = cache[("비난방", nm)]
@@ -75,7 +81,7 @@ def build_all(ef_multi, ef_planar, answer):
     tr, tg, te, ta = {}, {}, {}, {}
     for s in M.TRAIN_SHEETS:
         tr[s] = M.build_case(ef_multi, ef_planar, s, M.NAME_MAP_TO_PLANAR.get(s, s), False); tg[s] = M.get_answer(answer, s)
-    for s2, s0 in TEST9:
+    for s2, s0 in TESTS:
         te[s2] = M.build_case(ef_multi, ef_planar, s2, s0, False); ta[s2] = M.get_answer(answer, s2)
     return dict(tr=tr, tg=tg, te=te, ta=ta)
 
@@ -102,9 +108,9 @@ def run_scenarios(Vd, Ed, label, rows_loco, rows_test):
             for m in M.MODEL_NAMES:
                 for n in range(M.N_NIGHTS):
                     rows_loco.append(dict(shift=label, scen=sname, case=held, night=n + 1, model=m, actual=act, pred=float(pr[m][n])))
-        # 독립 테스트: 학습 30개 전체(Tr), 시험 9개(Te)
+        # 독립 테스트: 학습 30개 전체(Tr), 시험 10개(Te)
         Xtr = np.concatenate([Tr["tr"][c].mean(axis=1) for c in names]); ytr = np.concatenate([np.full(M.N_NIGHTS, Tr["tg"][c]) for c in names])
-        for s2, _ in TEST9:
+        for s2, _ in TESTS:
             Xte = Te["te"][s2].mean(axis=1); act = Te["ta"][s2]
             pr = M.fit_predict_all(Xtr, ytr, Xte, 2)
             for m in M.MODEL_NAMES:
