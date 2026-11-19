@@ -20,7 +20,26 @@ def sun_position(n, lat, lon, tz, shift=0.0, day0=1):
     return alt, az
 
 
-def solar_on_surface(G, D, alt, az, surf_az_deg, tilt_deg, rho_g, obstacles=()):
+def sky_view_factor(surf_az_deg, tilt_deg, obstacles=(), n=180):
+    """등방 하늘에서 장애물(방위min, 방위max, 고도min, 고도max, deg)을 뺀 가시율(0 ~ 1).
+    면이 보는 하늘의 입사각 코사인 가중 적분에서 장애물이 가리는 몫을 뺀다. 장애물이 겹치지 않는다고 본다.
+    VOLTRA 매뉴얼 D.4: 확산일사는 노드 주변 하늘 가시율(일사 장애물 포함)로 줄인다."""
+    if not obstacles:
+        return 1.0
+    g, t = np.radians(surf_az_deg), np.radians(tilt_deg)
+    blocked = 0.0
+    for o in obstacles:
+        A = np.radians(np.linspace(o[0], o[1], n + 1)); E = np.radians(np.linspace(max(o[2], 0.0), o[3], n + 1))
+        Am, Em = (A[1:] + A[:-1]) / 2, (E[1:] + E[:-1]) / 2
+        dA, dE = A[1] - A[0], E[1] - E[0]
+        AA, EE = np.meshgrid(Am, Em)
+        cos_i = np.sin(EE) * np.cos(t) + np.cos(EE) * np.sin(t) * np.cos(AA - g)
+        blocked += (np.maximum(cos_i, 0) * np.cos(EE)).sum() * dA * dE
+    total = np.pi * (1 + np.cos(t)) / 2
+    return float(max(0.0, 1.0 - blocked / total))
+
+
+def solar_on_surface(G, D, alt, az, surf_az_deg, tilt_deg, rho_g, obstacles=(), diffuse_obstruction=True):
     """경사면 입사 일사(직달 + 확산 + 지면반사), W/m2.
     surf_az_deg: 면의 방위(남 0, 서 +90, 동 -90). tilt_deg: 90 이면 수직.
     obstacles: [(방위min, 방위max, 고도min, 고도max) deg] 태양이 이 범위에 있으면 직달 차단."""
@@ -33,4 +52,5 @@ def solar_on_surface(G, D, alt, az, surf_az_deg, tilt_deg, rho_g, obstacles=()):
     Ib = np.where(blocked, 0.0, (Gh - Dh) / np.maximum(np.sin(alt), 1e-3))
     g, t = np.radians(surf_az_deg), np.radians(tilt_deg)
     cos_i = np.sin(alt) * np.cos(t) + np.cos(alt) * np.sin(t) * np.cos(az - g)
-    return Ib * np.maximum(cos_i, 0) + Dh * (1 + np.cos(t)) / 2 + rho_g * Gh * (1 - np.cos(t)) / 2
+    svf = sky_view_factor(surf_az_deg, tilt_deg, obstacles) if diffuse_obstruction else 1.0
+    return Ib * np.maximum(cos_i, 0) + Dh * svf * (1 + np.cos(t)) / 2 + rho_g * Gh * (1 - np.cos(t)) / 2

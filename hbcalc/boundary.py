@@ -31,6 +31,7 @@ class Boundary:
     # 태양 장애물 (방위min, 방위max, 고도min, 고도max) deg. 기본값: 고도 5도 이하 직달 차단.
     # 직달 = (G-D)/sin(고도) 라서 일출 직후 값이 폭주하는 것을 막는다 (VOLTRA 템플릿의 sobs 와 같은 설정).
     obstacles: tuple = ((-180.0, 180.0, 0.0, 5.0),)
+    diffuse_obstruction: bool = False   # 확산일사도 장애물이 가리는 하늘 비율만큼 줄임 (VOLTRA 매뉴얼 D.4, 8.64)
     # 영역별 (공기온도, 대류계수) 덮어쓰기: {zone id: (T_air, h)} (배열 또는 스칼라). 좌우 실내 h 가 다를 때 등.
     zone_values: dict | None = None
 
@@ -52,7 +53,7 @@ class Boundary:
             return np.zeros(self.n)
         alt, az = sun_position(self.n, self.lat, self.lon, self.tz, self.solar_shift_h, self.day0)
         return solar_on_surface(self.G, self.D, alt, az, self.surf_az_deg, self.tilt_deg,
-                                self.ground_refl, self.obstacles)
+                                self.ground_refl, self.obstacles, self.diffuse_obstruction)
 
     @classmethod
     def constant(cls, n, T_out=-5.0, T_in=20.0, h_out=17.0, h_in=1.5, dt=3600.0):
