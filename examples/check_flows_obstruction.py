@@ -22,7 +22,10 @@ for k,kw in cases.items():
         res=[]
         for z in (1,2,3):
             vn=V[z][0]-V[z][1]; mn=(f[z][0]-f[z][1])[:N]
-            res.append((100*(mn[mk].mean()-vn[mk].mean())/abs(vn[mk].mean()), abs(mn-vn).mean(), abs(mn-vn).max()))
+            e=mn-vn; vm=abs(vn[mk].mean())
+            res.append((100*e[mk].mean()/vm, abs(e[mk]).mean(), abs(e[mk]).max(), 100*abs(e[mk]).mean()/vm, abs(e).mean(), abs(e).max()))
         row.append(res)
+
     for obs,res in zip(("끔","켬"),row):
-        print(f"{k} 차단 {obs}: 야간평균 오차% 실외 {res[0][0]:+.2f} 왼쪽 {res[1][0]:+.2f} 오른쪽 {res[2][0]:+.2f} | 시간별 MAE W 실외 {res[0][1]:.2f} 실내 {res[1][1]:.3f},{res[2][1]:.3f} | 시간별 최대 W 실외 {res[0][2]:.1f}",flush=True)
+        for z,nm in ((2,"왼쪽"),(3,"오른쪽"),(1,"실외")):
+            r=res[z-1]; print(f"{k} 차단{obs} {nm}: 야간평균 {r[0]:+.2f}% | 야간 시간별 MAE {r[1]:.3f} W ({r[3]:.2f}%) 최대 {r[2]:.3f} W | 전체시간 MAE {r[4]:.3f} 최대 {r[5]:.3f} W",flush=True)
