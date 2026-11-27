@@ -52,9 +52,13 @@ def strip_pair_z(lo_a, hi_a, plane_a, lo_b, hi_b, plane_b, z_edges, ngl=12):
 
 
 class Solver3D:
-    def __init__(self, model: Model, nz: int = 6, z_edges=None, fold: bool = True):
+    def __init__(self, model: Model, nz: int = 6, z_edges=None, fold: bool = True, w_fn=None, vf_min: float = 1e-4):
         """nz: 깊이 방향 균일 조각 수(z_edges 를 주지 않을 때). z_edges: 0 ~ zt 의 조각 경계 좌표(m).
-        fold: 깊이 중간면 대칭이면 절반만 푼다."""
+        fold: 깊이 중간면 대칭이면 절반만 푼다.
+        vf_min: VOLTRA 의 'smallest accepted view factor'(.vtr 의 vwfc, 기본 0.0001). 두 방향 형상계수 F_ij, F_ji 가 모두 이 값보다 작은
+              쌍은 버리고 그 몫은 먼 곳(공기온도)으로 보낸다. VOLTRA .vwf 와 쌍 단위로 일치함을 확인(8.79). 0 이면 버리지 않는다.
+        w_fn: 시험용. 사각형 면 목록(quad_geom: (축, 평면, lo, hi, z0, z1, zone) m 단위)을 받아 교환면적 행렬 (nq, nq)을 돌려주는 함수.
+              주면 해석 형상계수 대신 쓴다(예: exchange_from_vwf 로 VOLTRA .vwf 값을 넣기)."""
         self.m = m = model
         zt = m.zt
         ze = np.linspace(0, zt, nz + 1) if z_edges is None else np.asarray(z_edges, float)
@@ -116,6 +120,12 @@ class Solver3D:
                 blk = strip_pair_z(la, ha, pa, lb, hb, pb, ze)
                 W[ia * nzs:(ia + 1) * nzs, ib * nzs:(ib + 1) * nzs] = blk
                 W[ib * nzs:(ib + 1) * nzs, ia * nzs:(ia + 1) * nzs] = blk.T
+        self.quad_geom = [(F[f][2], ext[f][2], ext[f][0], ext[f][1], ze[k], ze[k + 1], F[f][3]) for f, k in zip(fq, sq)]
+        if w_fn is not None:
+            W = np.asarray(w_fn(self.quad_geom), float)
+        elif vf_min > 0:
+            Fr = W / Aq[:, None]
+            W = np.where((Fr >= vf_min) | (Fr.T >= vf_min), W, 0.0)
         epsq = eps2[fq]
         Gt, Gs, self.view_sum = grey_network([dict(eps=e) for e in epsq], W, Aq, m.hrb)
         gq = epsq * Aq * m.hrb / (1 - epsq)
@@ -241,3 +251,28 @@ class Solver3D:
         for z, q in self.zone_node_flows().items():
             res[z] = (np.where(q < 0, -q, 0.0).sum(1), np.where(q > 0, q, 0.0).sum(1))
         return res
+
+
+def exchange_from_vwf(vwf):
+    """VOLTRA .vwf (hbcalc.voltra_vwf.read_vwf 결과)의 면별 형상계수로 사각형 면 교환면적을 만드는 w_fn (시험용).
+    VOLTRA 면(격자 칸 x z 조각)을 좌표(mm)로 사각형 면에 1대1 대응시킨다. 상삼각 저장이라 대칭으로 채운다."""
+    import scipy.sparse as _sp
+    faces, Fu = vwf["faces"], vwf["F"].tocoo()
+    area = np.array([f[2] for f in faces])
+    Wv = _sp.csr_matrix((Fu.data * area[Fu.row], (Fu.row, Fu.col)), shape=(len(faces),) * 2)
+    Wv = (Wv + Wv.T).tocsr()
+    def key_of_box(b):
+        r = lambda v: round(v, 3)
+        if b[2] == b[3]: return ("x", r(b[2]), r(b[0]), r(b[1]), r(b[4]), r(b[5]))
+        return ("y", r(b[0]), r(b[2]), r(b[3]), r(b[4]), r(b[5]))
+    vk = {key_of_box(f[4]): i for i, f in enumerate(faces)}
+
+    def fn(qg):
+        r = lambda v: round(v * 1000, 3)
+        ids = [vk.get((ax, r(pl), r(lo), r(hi), r(z0), r(z1))) for ax, pl, lo, hi, z0, z1, _ in qg]
+        miss = sum(i is None for i in ids)
+        if miss:
+            raise ValueError(f"vwf 에서 찾지 못한 사각형 면 {miss}개")
+        ii = np.array(ids)
+        return Wv[ii][:, ii].toarray()
+    return fn
